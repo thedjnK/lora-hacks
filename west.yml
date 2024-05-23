@@ -1,0 +1,26 @@
+manifest:
+  remotes:
+    - name: zephyr
+      url-base: https://github.com/zephyrproject-rtos
+    - name: thedjnK
+      url-base: https://github.com/thedjnK
+
+  projects:
+    - name: zephyr
+      remote: zephyr
+      revision: main
+      import:
+        name-allowlist:
+          - cmsis
+          - hal_nordic
+          - loramac-node
+          - mcuboot
+          - picolibc
+          - tinycrypt
+          - zcbor
+    - name: boards
+      remote: thedjnK
+      revision: main
+
+  self:
+    path: lora-hacks
