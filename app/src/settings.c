@@ -1,0 +1,119 @@
+/*
+ * Copyright (c) 2024, Jamie M.
+ *
+ * All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+ */
+
+#include <zephyr/kernel.h>
+#include <zephyr/settings/settings.h>
+#include "settings.h"
+
+static uint8_t lora_dev_eui[LORA_DEV_EUI_SIZE];
+static uint8_t lora_join_eui[LORA_JOIN_EUI_SIZE];
+static uint8_t lora_app_key[LORA_APP_KEY_SIZE];
+
+static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb read_cb,
+				void *cb_arg)
+{
+	const char *next;
+	size_t name_len;
+	int rc = -ENOENT;
+
+	name_len = settings_name_next(name, &next);
+
+	if (!next) {
+		if (strncmp(name, "dev_eui", name_len) == 0) {
+			if (len != sizeof(lora_dev_eui)) {
+				return -EINVAL;
+			}
+
+			rc = read_cb(cb_arg, lora_dev_eui, sizeof(lora_dev_eui));
+
+			if (rc < 0) {
+				goto finish;
+			}
+
+			rc = 0;
+		} else if (strncmp(name, "join_eui", name_len) == 0) {
+			if (len != sizeof(lora_join_eui)) {
+				return -EINVAL;
+			}
+
+			rc = read_cb(cb_arg, lora_join_eui, sizeof(lora_join_eui));
+
+			if (rc < 0) {
+				goto finish;
+			}
+
+			rc = 0;
+		} else if (strncmp(name, "app_key", name_len) == 0) {
+			if (len != sizeof(lora_app_key)) {
+				return -EINVAL;
+			}
+
+			rc = read_cb(cb_arg, lora_app_key, sizeof(lora_app_key));
+
+			if (rc < 0) {
+				goto finish;
+			}
+
+			rc = 0;
+		}
+
+	}
+
+finish:
+	return -ENOENT;
+}
+
+static int lora_keys_handle_export(int (*cb)(const char *name, const void *value, size_t val_len))
+{
+	(void)cb("lora_keys/dev_eui", lora_dev_eui, sizeof(lora_dev_eui));
+	(void)cb("lora_keys/join_eui", lora_join_eui, sizeof(lora_join_eui));
+	(void)cb("lora_keys/app_key", lora_app_key, sizeof(lora_app_key));
+
+	return 0;
+}
+
+static int lora_keys_handle_commit(void)
+{
+	return 0;
+}
+
+static int lora_keys_handle_get(const char *name, char *val, int val_len_max)
+{
+	const char *next;
+
+	if (settings_name_steq(name, "dev_eui", &next) && !next) {
+		if (val_len_max < sizeof(lora_dev_eui)) {
+			return -E2BIG;
+		}
+
+		memcpy(val, lora_dev_eui, sizeof(lora_dev_eui));
+		return sizeof(lora_dev_eui);
+	} else if (settings_name_steq(name, "join_eui", &next) && !next) {
+		if (val_len_max < sizeof(lora_join_eui)) {
+			return -E2BIG;
+		}
+
+		memcpy(val, lora_join_eui, sizeof(lora_join_eui));
+		return sizeof(lora_join_eui);
+	} else if (settings_name_steq(name, "app_key", &next) && !next) {
+		if (val_len_max < sizeof(lora_app_key)) {
+			return -E2BIG;
+		}
+
+		memcpy(val, lora_app_key, sizeof(lora_app_key));
+		return sizeof(lora_app_key);
+	}
+
+	return -ENOENT;
+}
+
+void lora_keys_load(void)
+{
+	settings_load_subtree("lora_keys");
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(lora_keys, "lora_keys", lora_keys_handle_get, lora_keys_handle_set,
+			       lora_keys_handle_commit, lora_keys_handle_export);
