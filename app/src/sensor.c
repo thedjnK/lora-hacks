@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2024, Jamie M.
+ *
+ * All right reserved. This code is NOT apache or FOSS/copyleft licensed.
  */
 
 #include <zephyr/kernel.h>
@@ -13,7 +15,7 @@ LOG_MODULE_REGISTER(sensor, LOG_LEVEL_DBG);
 
 static const struct device *const sensor = DEVICE_DT_GET(SENSOR_DEV);
 
-static int fetch_readings(int8_t *temperature, int8_t *humidity)
+int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 {
 	struct sensor_value temp;
 	int rc;
@@ -59,25 +61,12 @@ static int fetch_readings(int8_t *temperature, int8_t *humidity)
 
 int sensor_setup(void)
 {
-	int rc;
-
         if (!device_is_ready(sensor)) {
                 LOG_ERR("Device not ready: %s", sensor->name);
                 return -EIO;
         }
 
-	while (1) {
-		int8_t temperature[2];
-		int8_t humidity;
-
-		rc = fetch_readings(temperature, &humidity);
-
-		if (rc < 0) {
-			return 0;
-		}
-
-		k_msleep(1000);
-	}
-
 	return 0;
 }
+
+
