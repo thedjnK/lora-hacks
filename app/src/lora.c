@@ -110,6 +110,10 @@ int lora_setup(void)
 		return -ETIMEDOUT;
 	}
 
+	/* Change to DR3 */
+	(void)lorawan_set_datarate(LORAWAN_DR_3);
+	lorawan_enable_adr(true);
+
 	return 0;
 }
 
