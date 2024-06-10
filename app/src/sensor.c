@@ -35,7 +35,7 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 	}
 
 	temperature[0] = temp.val1;
-	temperature[1] = temp.val2;
+	temperature[1] = temp.val2 / 10000;
 
 	LOG_INF("Temperature: %.1fC", sensor_value_to_double(&temp));
 
