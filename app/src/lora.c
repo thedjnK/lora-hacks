@@ -77,15 +77,6 @@ int lora_setup(void)
 		return -ENOENT;
 	}
 
-#if 0
-	rc = settings_runtime_get("lora_keys/dev_nonce", &join_cfg.otaa.dev_nonce, sizeof(join_cfg.otaa.dev_nonce));
-
-	if (rc != sizeof(join_cfg.otaa.dev_nonce)) {
-		LOG_ERR("Invalid setting get dev nonce response: %d", rc);
-		return rc;
-	}
-#endif
-
 	rc = lorawan_start();
 
 	if (rc < 0) {

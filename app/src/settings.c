@@ -13,9 +13,6 @@
 static uint8_t lora_dev_eui[LORA_DEV_EUI_SIZE];
 static uint8_t lora_join_eui[LORA_JOIN_EUI_SIZE];
 static uint8_t lora_app_key[LORA_APP_KEY_SIZE];
-#if 0
-static uint16_t lora_dev_nonce;
-#endif
 
 static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb read_cb,
 				void *cb_arg)
@@ -71,11 +68,6 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 			}
 
 			rc = 0;
-#if 0
-		} else if (strncmp(name, "dev_nonce", name_len) == 0) {
-			output = (uint8_t *)&lora_dev_nonce;
-			output_size = sizeof(lora_dev_nonce);
-#endif
 		}
 
 	}
@@ -111,9 +103,6 @@ static int lora_keys_handle_export(int (*cb)(const char *name, const void *value
 	(void)cb("lora_keys/dev_eui", lora_dev_eui, sizeof(lora_dev_eui));
 	(void)cb("lora_keys/join_eui", lora_join_eui, sizeof(lora_join_eui));
 	(void)cb("lora_keys/app_key", lora_app_key, sizeof(lora_app_key));
-#if 0
-	(void)cb("lora_keys/dev_nonce", &lora_dev_nonce, sizeof(lora_dev_nonce));
-#endif
 
 	return 0;
 }
@@ -148,15 +137,6 @@ static int lora_keys_handle_get(const char *name, char *val, int val_len_max)
 
 		memcpy(val, lora_app_key, sizeof(lora_app_key));
 		return sizeof(lora_app_key);
-#if 0
-	} else if (settings_name_steq(name, "dev_nonce", &next) && !next) {
-		if (val_len_max < sizeof(lora_dev_nonce)) {
-			return -E2BIG;
-		}
-
-		memcpy(val, &lora_dev_nonce, sizeof(lora_dev_nonce));
-		return sizeof(lora_dev_nonce);
-#endif
 	}
 
 	return -ENOENT;
