@@ -10,6 +10,7 @@
 #include "sensor.h"
 #include "lora.h"
 #include "leds.h"
+#include "peripherals.h"
 
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
@@ -25,6 +26,7 @@ int main(void)
 	uint8_t lora_data[3];
 	uint8_t unconfirmed_packets = CONFIRMED_PACKET_ATTEMPTS;
 
+	peripheral_setup();
 	(void)leds_init();
 	lora_keys_load();
 	rc = sensor_setup();
