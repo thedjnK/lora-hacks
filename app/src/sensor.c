@@ -52,7 +52,8 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 		temp.val1 = 100;
 	}
 
-	*humidity = (int8_t)temp.val1;
+	humidity[0] = temp.val1;
+	humidity[1] = temp.val2 / 10000;
 
 	LOG_INF("Humidity: %.1f%c", sensor_value_to_double(&temp), '%');
 
@@ -68,5 +69,3 @@ int sensor_setup(void)
 
 	return 0;
 }
-
-

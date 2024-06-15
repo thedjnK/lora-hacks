@@ -7,5 +7,5 @@
 /* Setup sensor module */
 int sensor_setup(void);
 
-/* Fetch sensor readings in XX.YY format for temperature and XX format for humidity */
+/* Fetch sensor readings in XX.YY format for temperature and humidity */
 int sensor_fetch_readings(int8_t *temperature, int8_t *humidity);

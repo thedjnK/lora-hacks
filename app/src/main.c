@@ -23,8 +23,8 @@ int main(void)
 {
 	int rc;
 	int8_t temperature[2];
-	int8_t humidity;
-	uint8_t lora_data[3];
+	int8_t humidity[2];
+	uint8_t lora_data[4];
 	uint8_t unconfirmed_packets = CONFIRMED_PACKET_ATTEMPTS;
 
 	peripheral_setup();
@@ -53,12 +53,13 @@ int main(void)
 #endif
 
 	while (1) {
-		rc = sensor_fetch_readings(temperature, &humidity);
+		rc = sensor_fetch_readings(temperature, humidity);
 
 		if (rc == 0) {
 			lora_data[0] = temperature[0];
 			lora_data[1] = temperature[1];
-			lora_data[2] = humidity;
+			lora_data[2] = humidity[0];
+			lora_data[3] = humidity[1];
 
 			rc = lora_send_message(lora_data, sizeof(lora_data), (unconfirmed_packets == CONFIRMED_PACKET_ATTEMPTS ? true : false), SEND_ATTEMPTS);
 
