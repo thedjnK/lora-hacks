@@ -11,6 +11,7 @@
 #include "lora.h"
 #include "leds.h"
 #include "peripherals.h"
+#include "bluetooth.h"
 
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
@@ -42,6 +43,14 @@ int main(void)
 		LOG_ERR("LoRa setup failed: cannot continue");
 		return 0;
 	}
+
+#ifdef CONFIG_BT
+	rc = bluetooth_init();
+
+	if (rc != 0) {
+		LOG_ERR("Bluetooth setup failed: cannot continue");
+	}
+#endif
 
 	while (1) {
 		rc = sensor_fetch_readings(temperature, &humidity);
