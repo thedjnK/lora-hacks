@@ -8,7 +8,7 @@
 #include <zephyr/logging/log.h>
 #include "adc.h"
 
-LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(adc, CONFIG_APP_ADC_LOG_LEVEL);
 
 const struct device *adc = DEVICE_DT_GET(DT_NODELABEL(adc));
 

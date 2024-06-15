@@ -9,7 +9,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/sensor.h>
 
-LOG_MODULE_REGISTER(sensor, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(sensor, CONFIG_APP_SENSOR_LOG_LEVEL);
 
 #define SENSOR_DEV DT_NODELABEL(si7021)
 

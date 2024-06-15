@@ -1,0 +1,105 @@
+#
+# Copyright (c) 2024, Jamie M.
+#
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+#
+
+menu "Application"
+
+config APP_SENSOR_READING_TIME
+	int "Time (in seconds) between samples"
+	default 300
+	range 30 7200
+
+config APP_LORA_CONFIRMED_PACKET_AFTER
+	int "Number of unconfirmed packets before confirmed packet"
+	default 20
+	range 0 100
+	help
+	  Number of unconfirmed uplink packets that are sent before a confirmed packet is sent.
+	  Set to 0 to disabled
+
+config APP_LORA_USE_SPECIFIC_DATARATE
+	bool "Use specific datarate"
+	default y
+	help
+	  If enabled, will use a specific datarate at startup
+
+choice APP_LORA_DATARATE
+	prompt "Datarata"
+	depends on APP_LORA_USE_SPECIFIC_DATARATE
+	default APP_LORA_DATARATE_5
+
+config APP_LORA_DATARATE_0
+	bool "0"
+	help
+	  Use datarate 0 (SF12, 125KHz, 250bps, 51 byte application payload)
+
+config APP_LORA_DATARATE_1
+	bool "1"
+	help
+	  Use datarate 1 (SF11, 125KHz, 440bps, 51 byte application payload)
+
+config APP_LORA_DATARATE_2
+	bool "2"
+	help
+	  Use datarate 2 (SF10, 125KHz, 960bps, 51 byte application payload)
+
+config APP_LORA_DATARATE_3
+	bool "3"
+	help
+	  Use datarate 3 (SF9, 125KHz, 1760bps, 115 byte application payload)
+
+config APP_LORA_DATARATE_4
+	bool "4"
+	help
+	  Use datarate 4 (SF8, 125KHz, 3125bps, 222 byte application payload)
+
+config APP_LORA_DATARATE_5
+	bool "5"
+	help
+	  Use datarate 5 (SF7, 125KHz, 5470bps, 222 byte application payload)
+
+endchoice # CLOCK_CONTROL_LPC11U6X_PLL_SRC
+
+config APP_LORA_USE_ADR
+	bool "Use ADR"
+	default y
+	help
+	  If enabled, will use adaptive data rate
+
+module = APP
+module-str = Application
+source "subsys/logging/Kconfig.template.log_config"
+
+module = APP_LEDS
+module-str = LEDs
+source "subsys/logging/Kconfig.template.log_config"
+
+module = APP_LORA
+module-str = LoRa
+source "subsys/logging/Kconfig.template.log_config"
+
+module = APP_SENSOR
+module-str = Sensor
+source "subsys/logging/Kconfig.template.log_config"
+
+if ADC
+
+module = APP_ADC
+module-str = Battery voltage measurement
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # ADC
+
+if BT
+
+module = APP_BLUETOOTH
+module-str = Bluetooth
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # BT
+
+endmenu
+
+source "Kconfig.zephyr"

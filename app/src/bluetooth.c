@@ -12,7 +12,7 @@
 #include "bluetooth.h"
 #include "leds.h"
 
-LOG_MODULE_REGISTER(bluetooth, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(bluetooth, CONFIG_APP_BLUETOOTH_LOG_LEVEL);
 
 static struct k_work advertise_work;
 static struct k_work button_work;

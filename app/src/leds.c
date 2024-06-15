@@ -16,7 +16,7 @@ static const struct gpio_dt_spec led_red = LED_RED_DEVICE;
 static const struct gpio_dt_spec led_green = LED_GREEN_DEVICE;
 static const struct gpio_dt_spec led_blue = LED_BLUE_DEVICE;
 
-LOG_MODULE_REGISTER(leds, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(leds, CONFIG_APP_LEDS_LOG_LEVEL);
 
 int leds_init(void)
 {

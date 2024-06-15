@@ -14,10 +14,9 @@
 #include "peripherals.h"
 #include "bluetooth.h"
 
-LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
-#define SENSOR_READING_TIME K_SECONDS(2 * 60 + 30)
-#define CONFIRMED_PACKET_ATTEMPTS 20
+#define SENSOR_READING_TIME K_SECONDS(CONFIG_APP_SENSOR_READING_TIME)
 #define SEND_ATTEMPTS 3
 
 int main(void)
@@ -26,7 +25,7 @@ int main(void)
 	int8_t temperature[2];
 	int8_t humidity[2];
 	uint8_t lora_data[6];
-	uint8_t unconfirmed_packets = CONFIRMED_PACKET_ATTEMPTS;
+	uint8_t unconfirmed_packets = CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER;
 
 #ifdef CONFIG_ADC
 	uint16_t voltage;
@@ -81,13 +80,20 @@ int main(void)
 			lora_data[5] = voltage & 0xff;
 #endif
 
-			rc = lora_send_message(lora_data, sizeof(lora_data), (unconfirmed_packets == CONFIRMED_PACKET_ATTEMPTS ? true : false), SEND_ATTEMPTS);
+#if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
+			rc = lora_send_message(lora_data, sizeof(lora_data),
+					       (unconfirmed_packets ==
+						CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER ? true :
+						false), SEND_ATTEMPTS);
 
-			if (unconfirmed_packets == CONFIRMED_PACKET_ATTEMPTS) {
+			if (unconfirmed_packets == CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER) {
 				unconfirmed_packets = 0;
 			} else {
 				++unconfirmed_packets;
 			}
+#else
+			rc = lora_send_message(lora_data, sizeof(lora_data), false, SEND_ATTEMPTS);
+#endif
 
 			if (rc == 0) {
 				LOG_INF("Reading sent");

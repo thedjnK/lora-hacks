@@ -20,7 +20,7 @@
 
 #define LORA_DEVICE DEVICE_DT_GET(DT_ALIAS(lora0))
 
-LOG_MODULE_REGISTER(lora, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(lora, CONFIG_APP_LORA_LOG_LEVEL);
 
 int lora_setup(void)
 {
@@ -101,9 +101,27 @@ int lora_setup(void)
 		return -ETIMEDOUT;
 	}
 
-	/* Change to DR3 */
+#if CONFIG_APP_LORA_USE_SPECIFIC_DATARATE
+	/* Change to desired datarate */
+#if CONFIG_APP_LORA_DATARATE_0
+	(void)lorawan_set_datarate(LORAWAN_DR_0);
+#elif CONFIG_APP_LORA_DATARATE_1
+	(void)lorawan_set_datarate(LORAWAN_DR_1);
+#elif CONFIG_APP_LORA_DATARATE_2
+	(void)lorawan_set_datarate(LORAWAN_DR_2);
+#elif CONFIG_APP_LORA_DATARATE_3
 	(void)lorawan_set_datarate(LORAWAN_DR_3);
+#elif CONFIG_APP_LORA_DATARATE_4
+	(void)lorawan_set_datarate(LORAWAN_DR_4);
+#elif CONFIG_APP_LORA_DATARATE_5
+	(void)lorawan_set_datarate(LORAWAN_DR_5);
+#endif
+
+#endif
+
+#ifdef CONFIG_APP_LORA_USE_ADR
 	lorawan_enable_adr(true);
+#endif
 
 	return 0;
 }
