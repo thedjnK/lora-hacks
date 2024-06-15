@@ -15,9 +15,14 @@ void peripheral_setup(void)
 	NRF_POWER->TASKS_LOWPWR = 1;
 
 	/* Who cares about any of this */
-	NRF_ADC->POWER = 0;
 	NRF_LPCOMP->POWER = 0;
 	NRF_QDEC->POWER = 0;
+	NRF_TIMER1->POWER = 0;
+	NRF_TIMER2->POWER = 0;
+
+#ifndef CONFIG_ADC
+	NRF_ADC->POWER = 0;
+#endif
 
 #ifndef CONFIG_BT
 	NRF_ECB->POWER = 0;
@@ -29,9 +34,9 @@ void peripheral_setup(void)
 	NRF_TIMER0->POWER = 0;
 #endif
 
-	NRF_TIMER1->POWER = 0;
-	NRF_TIMER2->POWER = 0;
-//	NRF_WDT->POWER = 0;
+#ifndef CONFIG_WDT
+	NRF_WDT->POWER = 0;
+#endif
 
 #if !(CONFIG_LOG) && !(CONFIG_SHELL)
 	NRF_UART0->POWER = 0;
