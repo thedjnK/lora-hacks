@@ -10,6 +10,7 @@
 #include "sensor.h"
 #include "lora.h"
 #include "leds.h"
+#include "adc.h"
 #include "peripherals.h"
 #include "bluetooth.h"
 
@@ -24,13 +25,21 @@ int main(void)
 	int rc;
 	int8_t temperature[2];
 	int8_t humidity[2];
-	uint8_t lora_data[4];
+	uint8_t lora_data[6];
 	uint8_t unconfirmed_packets = CONFIRMED_PACKET_ATTEMPTS;
+
+#ifdef CONFIG_ADC
+	uint16_t voltage;
+#endif
 
 	peripheral_setup();
 	(void)leds_init();
 	lora_keys_load();
 	rc = sensor_setup();
+
+#ifdef CONFIG_ADC
+	adc_setup();
+#endif
 
 	if (rc != 0) {
 		LOG_ERR("Sensor setup failed: cannot continue");
@@ -55,11 +64,22 @@ int main(void)
 	while (1) {
 		rc = sensor_fetch_readings(temperature, humidity);
 
+#ifdef CONFIG_ADC
+		if (rc == 0) {
+			rc = adc_read_internal(&voltage);
+		}
+#endif
+
 		if (rc == 0) {
 			lora_data[0] = temperature[0];
 			lora_data[1] = temperature[1];
 			lora_data[2] = humidity[0];
 			lora_data[3] = humidity[1];
+
+#ifdef CONFIG_ADC
+			lora_data[4] = (voltage & 0xff00) >> 8;
+			lora_data[5] = voltage & 0xff;
+#endif
 
 			rc = lora_send_message(lora_data, sizeof(lora_data), (unconfirmed_packets == CONFIRMED_PACKET_ATTEMPTS ? true : false), SEND_ATTEMPTS);
 
@@ -75,7 +95,7 @@ int main(void)
 				LOG_ERR("Reading failed to send: %d", rc);
 			}
 		} else {
-			LOG_ERR("Failed to fetch sensor readings");
+			LOG_ERR("Failed to fetch sensor readings or ADC value");
 		}
 
 		k_sleep(SENSOR_READING_TIME);
