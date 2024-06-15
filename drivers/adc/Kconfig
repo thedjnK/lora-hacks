@@ -1,0 +1,5 @@
+if ADC
+
+rsource "Kconfig.nrfx"
+
+endif # ADC
