@@ -9,6 +9,7 @@
 #include <zephyr/device.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/settings/settings.h>
 #include "settings.h"
 
 #define READ_ARGS 1

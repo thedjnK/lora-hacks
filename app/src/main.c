@@ -13,6 +13,7 @@
 #include "adc.h"
 #include "peripherals.h"
 #include "bluetooth.h"
+#include "app_version.h"
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
@@ -30,6 +31,8 @@ int main(void)
 #ifdef CONFIG_ADC
 	uint16_t voltage;
 #endif
+
+	LOG_INF("Application version %s, built " __DATE__, APP_VERSION_EXTENDED_STRING);
 
 	peripheral_setup();
 	(void)leds_init();
