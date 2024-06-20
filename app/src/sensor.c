@@ -8,21 +8,38 @@
 #include <zephyr/device.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/regulator.h>
 
 LOG_MODULE_REGISTER(sensor, CONFIG_APP_SENSOR_LOG_LEVEL);
 
-#ifdef DT_HAS_SILABS_SI7006_ENABLED
+#if CONFIG_DT_HAS_SILABS_SI7006_ENABLED
 #define SENSOR_DEV DT_NODELABEL(si7021)
+#elif CONFIG_DT_HAS_BOSCH_BME680_ENABLED
+#define SENSOR_DEV DT_NODELABEL(bme680)
+#define REGULATOR_DEV DT_NODELABEL(ext_power)
 #else
 #define SENSOR_DEV DT_NODELABEL(dht11)
 #endif
 
 static const struct device *const sensor = DEVICE_DT_GET(SENSOR_DEV);
 
+#ifdef REGULATOR_DEV
+static const struct device *const regulator = DEVICE_DT_GET(REGULATOR_DEV);
+#endif
+
 int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 {
 	struct sensor_value temp;
 	int rc;
+
+#ifdef REGULATOR_DEV
+	rc = regulator_enable(regulator);
+
+	if (rc) {
+		LOG_ERR("Regulator enable failed: %d", rc);
+		return rc;
+	}
+#endif
 
 	rc = sensor_sample_fetch(sensor);
 
@@ -61,15 +78,38 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 
 	LOG_INF("Humidity: %.1f%c", sensor_value_to_double(&temp), '%');
 
+#ifdef REGULATOR_DEV
+	rc = regulator_disable(regulator);
+
+	if (rc) {
+		LOG_ERR("Regulator disable failed: %d", rc);
+		return rc;
+	}
+#endif
+
 	return 0;
 }
 
 int sensor_setup(void)
 {
-        if (!device_is_ready(sensor)) {
-                LOG_ERR("Device not ready: %s", sensor->name);
-                return -EIO;
-        }
+	int rc = 0;
 
-	return 0;
+	if (!device_is_ready(sensor)) {
+		LOG_ERR("Device not ready: %s", sensor->name);
+		rc = -EIO;
+		goto finish;
+	}
+
+#ifdef REGULATOR_DEV
+	if (!device_is_ready(regulator)) {
+		LOG_ERR("Device not ready: %s", regulator->name);
+		rc = -EIO;
+		goto finish;
+	}
+
+	rc = regulator_disable(regulator);
+#endif
+
+finish:
+	return rc;
 }
