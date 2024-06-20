@@ -11,7 +11,11 @@
 
 LOG_MODULE_REGISTER(sensor, CONFIG_APP_SENSOR_LOG_LEVEL);
 
+#ifdef DT_HAS_SILABS_SI7006_ENABLED
 #define SENSOR_DEV DT_NODELABEL(si7021)
+#else
+#define SENSOR_DEV DT_NODELABEL(dht11)
+#endif
 
 static const struct device *const sensor = DEVICE_DT_GET(SENSOR_DEV);
 

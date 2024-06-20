@@ -1,0 +1,20 @@
+/ {
+	dht11: dht11 {
+		compatible = "aosong,dht";
+		status = "okay";
+		dio-gpios = <&gpio0 3 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+	};
+};
+
+&gpio0 {
+	dht_power {
+		gpio-hog;
+		gpios = <23 GPIO_ACTIVE_HIGH>;
+		output-high;
+	};
+};
+
+&i2c0 {
+	status = "disabled";
+	/delete-node/ si7021@40;
+};
