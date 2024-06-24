@@ -1,0 +1,14 @@
+/ {
+	leds {
+		compatible = "gpio-leds";
+
+		ir_led: ir_led {
+			gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+			label = "Infrared LED";
+		};
+	};
+
+	aliases {
+		ir-led = &ir_led;
+	};
+};

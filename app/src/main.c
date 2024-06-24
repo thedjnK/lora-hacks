@@ -11,6 +11,7 @@
 #include "lora.h"
 #include "leds.h"
 #include "adc.h"
+#include "ir_led.h"
 #include "peripherals.h"
 #include "bluetooth.h"
 #include "app_version.h"
@@ -47,6 +48,15 @@ int main(void)
 		LOG_ERR("Sensor setup failed: cannot continue");
 		return 0;
 	}
+
+#ifdef CONFIG_APP_IR_LED
+	rc = ir_led_setup();
+
+	if (rc != 0) {
+		LOG_ERR("IR LED setup failed: cannot continue");
+		return 0;
+	}
+#endif
 
 	rc = lora_setup();
 

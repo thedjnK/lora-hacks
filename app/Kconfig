@@ -68,6 +68,13 @@ config APP_LORA_USE_ADR
 	help
 	  If enabled, will use adaptive data rate
 
+config APP_IR_LED
+	bool "Infrared LED support"
+	depends on "$(dt_alias_enabled,ir-led)"
+	default y
+	help
+	  If enabled, will include support for Infrared LED command output
+
 module = APP
 module-str = Application
 source "subsys/logging/Kconfig.template.log_config"
@@ -99,6 +106,14 @@ module-str = Bluetooth
 source "subsys/logging/Kconfig.template.log_config"
 
 endif # BT
+
+if APP_IR_LED
+
+module = APP_IR_LED
+module-str = IR LED
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # APP_INFRARED_LED
 
 endmenu
 
