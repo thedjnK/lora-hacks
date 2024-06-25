@@ -24,6 +24,14 @@ LOG_MODULE_REGISTER(lora, CONFIG_APP_LORA_LOG_LEVEL);
 
 #ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
 static void lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len,
+			  const uint8_t *hex_data);
+
+static struct lorawan_downlink_cb downlink_cb = {
+	.port = 1,
+	.cb = lora_downlink
+};
+
+static void lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len,
 			  const uint8_t *hex_data)
 {
 	lora_message_callback(port, hex_data, len);
@@ -48,13 +56,6 @@ int lora_setup(void)
 		.otaa.nwk_key = app_key,
 		.otaa.dev_nonce = 0u,
 	};
-
-#ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
-	struct lorawan_downlink_cb downlink_cb = {
-		.port = 1,
-		.cb = lora_downlink
-	};
-#endif
 
 	if (!device_is_ready(lora_dev)) {
 		LOG_ERR("LoRa device not ready");
