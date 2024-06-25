@@ -162,6 +162,7 @@ int ir_led_send(enum AC_CMD command)
 
 		default:
 		{
+			LOG_ERR("Invalid IR command specified: %d", command);
 			return -EINVAL;
 		}
 	};
