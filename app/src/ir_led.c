@@ -41,7 +41,7 @@ static void trigger_signal()
 	uint8_t loops = 15;
 
 	while (loops > 0) {
-		rc = gpio_pin_toggle_dt(&led);
+		rc = gpio_pin_set_dt(&led, 1);
 
 		if (rc != 0) {
 			LOG_ERR("GPIO toggle failed: %d", rc);
@@ -52,7 +52,7 @@ static void trigger_signal()
 		ASM_SLEEP_16X();
 		ASM_SLEEP_16X();
 
-		rc = gpio_pin_toggle_dt(&led);
+		rc = gpio_pin_set_dt(&led, 0);
 
 		if (rc != 0) {
 			LOG_ERR("GPIO toggle failed: %d", rc);
@@ -186,7 +186,7 @@ int ir_led_send(enum AC_CMD command)
 		uint8_t check = data[q];
 		t = 0;
 
-		while (t < sizeof(uint8_t))
+		while (t < 8)
 		{
 			trigger_signal();
 
@@ -216,7 +216,7 @@ int ir_led_send(enum AC_CMD command)
 
 	trigger_signal();
 
-	rc = gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+	rc = gpio_pin_set_dt(&led, 0);
 
 	return rc;
 }
@@ -227,5 +227,5 @@ int ir_led_setup()
 		return -EIO;
 	}
 
-	return 0;
+	return gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
 }
