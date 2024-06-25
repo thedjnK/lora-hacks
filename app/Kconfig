@@ -68,6 +68,12 @@ config APP_LORA_USE_ADR
 	help
 	  If enabled, will use adaptive data rate
 
+config APP_LORA_ALLOW_DOWNLINKS
+	bool "Allow downlinks"
+	default y
+	help
+	  If enabled, will allow application to receive and handle downlinks
+
 config APP_IR_LED
 	bool "Infrared LED support"
 	depends on "$(dt_alias_enabled,ir-led)"

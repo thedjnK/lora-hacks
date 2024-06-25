@@ -21,6 +21,10 @@ LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 #define SENSOR_READING_TIME K_SECONDS(CONFIG_APP_SENSOR_READING_TIME)
 #define SEND_ATTEMPTS 3
 
+enum lora_downlink_types {
+	LORA_DOWNLINK_TYPE_IR,
+};
+
 int main(void)
 {
 	int rc;
@@ -120,3 +124,29 @@ int main(void)
 		k_sleep(SENSOR_READING_TIME);
 	}
 }
+
+#ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
+void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
+{
+	if (port == 1) {
+		if (len == 0) {
+			LOG_ERR("Received 0 byte download on port 1");
+			return;
+		}
+
+		switch (data[0]) {
+#ifdef CONFIG_APP_IR_LED
+			case LORA_DOWNLINK_TYPE_IR:
+			{
+				(void)ir_led_send(data[1]);
+				break;
+			}
+#endif
+			default:
+			{
+				LOG_ERR("No handler for LoRa Downlink type %d", data[0]);
+			}
+		};
+	}
+}
+#endif
