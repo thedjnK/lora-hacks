@@ -8,7 +8,7 @@ menu "Application"
 
 config APP_SENSOR_READING_TIME
 	int "Time (in seconds) between samples"
-	default 300
+	default 150
 	range 30 7200
 
 config APP_LORA_CONFIRMED_PACKET_AFTER
