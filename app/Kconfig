@@ -81,6 +81,40 @@ config APP_IR_LED
 	help
 	  If enabled, will include support for Infrared LED command output
 
+config APP_TYPE
+	hex
+	default 0x34 if DT_HAS_AOSONG_DHT11_ENABLED && APP_IR_LED && ADC
+	default 0x32 if DT_HAS_BOSCH_BME680_ENABLED && APP_IR_LED && ADC
+	default 0x31 if DT_HAS_SILABS_SI7006_ENABLED && APP_IR_LED && ADC
+	default 0x24 if DT_HAS_AOSONG_DHT11_ENABLED && ADC
+	default 0x22 if DT_HAS_BOSCH_BME680_ENABLED && ADC
+	default 0x21 if DT_HAS_SILABS_SI7006_ENABLED && ADC
+	default 0x14 if DT_HAS_AOSONG_DHT11_ENABLED && APP_IR_LED
+	default 0x12 if DT_HAS_BOSCH_BME680_ENABLED && APP_IR_LED
+	default 0x11 if DT_HAS_SILABS_SI7006_ENABLED && APP_IR_LED
+	default 0x04 if DT_HAS_AOSONG_DHT11_ENABLED
+	default 0x02 if DT_HAS_BOSCH_BME680_ENABLED
+	default 0x01 if DT_HAS_SILABS_SI7006_ENABLED
+	default 0x00
+	range 0x00 0xffff
+	help
+	  bit 0: si7021
+	  bit 1: bme680
+	  bit 2: dht11
+	  bit 3: reserved
+	  bit 4: IR LED
+	  bit 5: ADC
+	  bit 6: reserved
+	  bit 7: reserved
+	  bit 8: reserved
+	  bit 9: reserved
+	  bit 10: reserved
+	  bit 11: reserved
+	  bit 12: reserved
+	  bit 13: reserved
+	  bit 14: reserved
+	  bit 15: reserved
+
 module = APP
 module-str = Application
 source "subsys/logging/Kconfig.template.log_config"

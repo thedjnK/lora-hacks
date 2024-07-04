@@ -21,6 +21,11 @@ LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 #define SENSOR_READING_TIME K_SECONDS(CONFIG_APP_SENSOR_READING_TIME)
 #define SEND_ATTEMPTS 3
 
+enum lora_uplink_types {
+	LORA_UPLINK_TYPE_STARTUP,
+	LORA_UPLINK_TYPE_READINGS,
+};
+
 enum lora_downlink_types {
 	LORA_DOWNLINK_TYPE_IR,
 };
@@ -28,10 +33,12 @@ enum lora_downlink_types {
 int main(void)
 {
 	int rc;
+	uint16_t application_type = CONFIG_APP_TYPE;
 	int8_t temperature[2];
 	int8_t humidity[2];
-	uint8_t lora_data[6];
+	uint8_t lora_data[8];
 	uint8_t unconfirmed_packets = CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER;
+	uint8_t data_size;
 
 #ifdef CONFIG_ADC
 	uint16_t voltage;
@@ -77,6 +84,24 @@ int main(void)
 	}
 #endif
 
+	/* Send connect message with version and application type */
+	data_size = 0;
+	lora_data[data_size++] = LORA_UPLINK_TYPE_STARTUP;
+	lora_data[data_size++] = APP_VERSION_MAJOR;
+	lora_data[data_size++] = APP_VERSION_MINOR;
+	lora_data[data_size++] = APP_PATCHLEVEL;
+	lora_data[data_size++] = APP_TWEAK;
+	lora_data[data_size++] = ((uint8_t *)&application_type)[0];
+	lora_data[data_size++] = ((uint8_t *)&application_type)[1];
+
+	rc = lora_send_message(lora_data, data_size, true, SEND_ATTEMPTS);
+
+	if (rc == 0) {
+		LOG_INF("Connect message sent");
+	} else {
+		LOG_ERR("Connect message failed to send: %d", rc);
+	}
+
 	while (1) {
 		rc = sensor_fetch_readings(temperature, humidity);
 
@@ -87,18 +112,20 @@ int main(void)
 #endif
 
 		if (rc == 0) {
-			lora_data[0] = temperature[0];
-			lora_data[1] = temperature[1];
-			lora_data[2] = humidity[0];
-			lora_data[3] = humidity[1];
+			data_size = 0;
+			lora_data[data_size++] = LORA_UPLINK_TYPE_READINGS;
+			lora_data[data_size++] = temperature[0];
+			lora_data[data_size++] = temperature[1];
+			lora_data[data_size++] = humidity[0];
+			lora_data[data_size++] = humidity[1];
 
 #ifdef CONFIG_ADC
-			lora_data[4] = (voltage & 0xff00) >> 8;
-			lora_data[5] = voltage & 0xff;
+			lora_data[data_size++] = (voltage & 0xff00) >> 8;
+			lora_data[data_size++] = voltage & 0xff;
 #endif
 
 #if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
-			rc = lora_send_message(lora_data, sizeof(lora_data),
+			rc = lora_send_message(lora_data, data_size,
 					       (unconfirmed_packets ==
 						CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER ? true :
 						false), SEND_ATTEMPTS);
