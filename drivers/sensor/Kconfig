@@ -1,0 +1,5 @@
+if SENSOR
+
+rsource "aosong/Kconfig"
+
+endif # SENSOR
