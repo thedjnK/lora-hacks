@@ -67,21 +67,21 @@ static int adc_nrfx_channel_setup(const struct device *dev,
 
 	switch (channel_cfg->gain) {
 	case ADC_GAIN_1_3:
-		if (channel_id == 0) {
+		if (channel_cfg->input_positive == 0) {
 			config->scaling = NRF_ADC_CONFIG_SCALING_SUPPLY_ONE_THIRD;
 		} else {
 			config->scaling = NRF_ADC_CONFIG_SCALING_INPUT_ONE_THIRD;
 		}
 		break;
 	case ADC_GAIN_2_3:
-		if (channel_id == 0) {
+		if (channel_cfg->input_positive == 0) {
 			config->scaling = NRF_ADC_CONFIG_SCALING_SUPPLY_TWO_THIRDS;
 		} else {
 			config->scaling = NRF_ADC_CONFIG_SCALING_INPUT_TWO_THIRDS;
 		}
 		break;
 	case ADC_GAIN_1:
-		if (channel_id == 0) {
+		if (channel_cfg->input_positive == 0) {
 			LOG_ERR("Selected ADC gain is not valid");
 			return -EINVAL;
 		} else {
