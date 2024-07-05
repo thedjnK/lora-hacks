@@ -81,6 +81,12 @@ config APP_IR_LED
 	help
 	  If enabled, will include support for Infrared LED command output
 
+config APP_EXTERNAL_DCDC
+	bool "External DCDC"
+	help
+	  If enabled, will sample AIN3 for the voltage with 2 BAS16 diodes dropping the voltage
+	  instead of the voltage in.
+
 config APP_TYPE
 	hex
 	default 0x34 if DT_HAS_AOSONG_DHT11_ENABLED && APP_IR_LED && ADC

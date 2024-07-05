@@ -4,6 +4,7 @@
  * All right reserved. This code is NOT apache or FOSS/copyleft licensed.
  */
 
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/logging/log.h>
 #include "adc.h"
@@ -16,12 +17,22 @@ int adc_setup()
 {
 	struct adc_channel_cfg adc_channel_config = {
 		.gain = ADC_GAIN_1_3,
-//		.gain = ADC_GAIN_2_3,
 		.reference = ADC_REF_INTERNAL,
 		.acquisition_time = ADC_ACQ_TIME_DEFAULT,
+		.channel_id = 0,
+#ifdef CONFIG_APP_EXTERNAL_DCDC
+		.input_positive = BIT(3),
+#else
 		.input_positive = 0,
+#endif
 	};
 	int rc;
+
+#ifdef CONFIG_APP_EXTERNAL_DCDC
+	const struct device *gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio0));
+
+	(void)gpio_pin_configure(gpio_dev, 3, GPIO_INPUT);
+#endif
 
 	if (!device_is_ready(adc)) {
 		LOG_ERR("ADC device not ready");
@@ -59,6 +70,12 @@ int adc_read_internal(uint16_t *voltage)
 	}
 
 	conversion = ((adc_value * 1000) / 1024 * 1200 * 3) / 1000;
+
+#ifdef CONFIG_APP_EXTERNAL_DCDC
+	/* Apply 2xBAS16 offset */
+	conversion += 500;
+#endif
+
 	*voltage = conversion;
 
 	LOG_INF("Power: %dmV", conversion);
