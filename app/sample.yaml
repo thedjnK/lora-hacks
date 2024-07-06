@@ -1,0 +1,33 @@
+sample:
+  name: lora-hacks
+common:
+  platform_allow:
+    - rs1xx
+  integration_platforms:
+    - rs1xx
+tests:
+  lora-hacks.si7021:
+    tags: default
+  lora-hacks.si7021.debug:
+    extra_args:
+      - FILE_SUFFX="debug"
+#  lora-hacks.bme680:
+#    extra_args:
+#      - EXTRA_CONF_FILE="bme680.conf"
+#      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay"
+#  lora-hacks.bme680.external_dcdc:
+#    extra_args:
+#      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
+#      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay"
+  lora-hacks.bme680.external_dcdc.ir_led:
+    extra_args:
+      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+  lora-hacks.bme680.external_dcdc.ir_led.debug:
+    extra_args:
+      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+      - FILE_SUFFX="debug"
+#  lora-hacks.dht11:
+#    extra_args:
+#      - EXTRA_CONF_FILE="dht11.overlay"
