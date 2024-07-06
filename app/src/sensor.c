@@ -16,9 +16,12 @@ LOG_MODULE_REGISTER(sensor, CONFIG_APP_SENSOR_LOG_LEVEL);
 #define SENSOR_DEV DT_NODELABEL(si7021)
 #elif CONFIG_DT_HAS_BOSCH_BME680_ENABLED
 #define SENSOR_DEV DT_NODELABEL(bme680)
-#define REGULATOR_DEV DT_NODELABEL(ext_power)
 #else
 #define SENSOR_DEV DT_NODELABEL(dht11)
+#endif
+
+#ifdef CONFIG_APP_POWER_DOWN_EXTERNAL_SENSOR
+#define REGULATOR_DEV DT_NODELABEL(ext_power)
 #endif
 
 static const struct device *const sensor = DEVICE_DT_GET(SENSOR_DEV);
@@ -32,7 +35,7 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 	struct sensor_value temp;
 	int rc;
 
-#ifdef REGULATOR_DEV
+#ifdef CONFIG_APP_POWER_DOWN_EXTERNAL_SENSOR
 	rc = regulator_enable(regulator);
 
 	if (rc) {
@@ -78,7 +81,7 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 
 	LOG_INF("Humidity: %.1f%c", sensor_value_to_double(&temp), '%');
 
-#ifdef REGULATOR_DEV
+#ifdef CONFIG_APP_POWER_DOWN_EXTERNAL_SENSOR
 	rc = regulator_disable(regulator);
 
 	if (rc) {
@@ -100,7 +103,7 @@ int sensor_setup(void)
 		goto finish;
 	}
 
-#ifdef REGULATOR_DEV
+#ifdef CONFIG_APP_POWER_DOWN_EXTERNAL_SENSOR
 	if (!device_is_ready(regulator)) {
 		LOG_ERR("Device not ready: %s", regulator->name);
 		rc = -EIO;

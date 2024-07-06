@@ -87,6 +87,14 @@ config APP_EXTERNAL_DCDC
 	  If enabled, will sample AIN3 for the voltage with 2 BAS16 diodes dropping the voltage
 	  instead of the voltage in.
 
+config APP_POWER_DOWN_EXTERNAL_SENSOR
+	bool "Power down external sensor when not in use"
+	depends on REGULATOR_FIXED
+	depends on "$(dt_nodelabel_enabled,ext_power)"
+	help
+	  If enabled, will power down the external sensor port when it is not in use, but will lose
+	  the configuration of the sensor if it is configured by the driver at start-up.
+
 config APP_TYPE
 	hex
 	default 0x34 if DT_HAS_AOSONG_DHT11_ENABLED && APP_IR_LED && ADC
