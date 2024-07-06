@@ -10,7 +10,7 @@ tests:
     tags: default
   lora-hacks.si7021.debug:
     extra_args:
-      - FILE_SUFFX="debug"
+      - FILE_SUFFIX="debug"
 #  lora-hacks.bme680:
 #    extra_args:
 #      - EXTRA_CONF_FILE="bme680.conf"
@@ -27,7 +27,7 @@ tests:
     extra_args:
       - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
       - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
-      - FILE_SUFFX="debug"
+      - FILE_SUFFIX="debug"
 #  lora-hacks.dht11:
 #    extra_args:
 #      - EXTRA_CONF_FILE="dht11.overlay"
