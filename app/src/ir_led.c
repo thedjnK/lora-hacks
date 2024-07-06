@@ -8,6 +8,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include "ir_led.h"
+#include "hfclk.h"
 
 LOG_MODULE_REGISTER(ir_led, CONFIG_APP_IR_LED_LOG_LEVEL);
 
@@ -52,6 +53,12 @@ static void trigger_signal()
 		ASM_SLEEP_16X();
 		ASM_SLEEP_16X();
 
+		/* Extended when testing wit HFCLK */
+		ASM_SLEEP_4X();
+		ASM_SLEEP_1X();
+		ASM_SLEEP_1X();
+		ASM_SLEEP_1X();
+
 		rc = gpio_pin_set_dt(&led, 0);
 
 		if (rc != 0) {
@@ -65,6 +72,9 @@ static void trigger_signal()
 		ASM_SLEEP_16X();
 		ASM_SLEEP_16X();
 		ASM_SLEEP_1X();
+
+		/* Extended when testing wit HFCLK */
+		ASM_SLEEP_16X();
 
 		--loops;
 	}
@@ -167,6 +177,10 @@ int ir_led_send(enum AC_CMD command)
 		}
 	};
 
+	rc = hfclk_enable();
+
+/* TODO: Check response */
+
 	/* Send start signal header */
 	trigger_signal();
 	trigger_signal();
@@ -178,7 +192,8 @@ int ir_led_send(enum AC_CMD command)
 	trigger_signal();
 
 	/* Wait for header space signal */
-	k_busy_wait(1608);
+//	k_busy_wait(1608);
+	k_busy_wait(1604);
 	__asm("NOP");
 
 	while (q < command_size)
@@ -193,7 +208,7 @@ int ir_led_send(enum AC_CMD command)
 			if ((check & 0x80) == 0)
 			{
 				/* 420us wait */
-				k_busy_wait(404);
+				k_busy_wait(400);
 				ASM_SLEEP_4X();
 				ASM_SLEEP_4X();
 				ASM_SLEEP_1X();
@@ -202,7 +217,7 @@ int ir_led_send(enum AC_CMD command)
 			else
 			{
 				/* 1.214ms wait */
-				k_busy_wait(1205);
+				k_busy_wait(1201);
 				ASM_SLEEP_1X();
 			}
 
@@ -217,6 +232,9 @@ int ir_led_send(enum AC_CMD command)
 	trigger_signal();
 
 	rc = gpio_pin_set_dt(&led, 0);
+
+	rc = hfclk_disable();
+/* TODO: Check response */
 
 	return rc;
 }

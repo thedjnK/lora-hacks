@@ -7,4 +7,4 @@ target_sources(app PRIVATE src/sensor.c src/settings.c src/lora.c src/leds.c src
 target_sources_ifdef(CONFIG_SHELL app PRIVATE src/shell.c)
 target_sources_ifdef(CONFIG_BT app PRIVATE src/bluetooth.c)
 target_sources_ifdef(CONFIG_ADC app PRIVATE src/adc.c)
-target_sources_ifdef(CONFIG_APP_IR_LED app PRIVATE src/ir_led.c)
+target_sources_ifdef(CONFIG_APP_IR_LED app PRIVATE src/ir_led.c src/hfclk.c)
