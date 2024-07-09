@@ -11,13 +11,19 @@ config APP_SENSOR_READING_TIME
 	default 150
 	range 30 7200
 
+config APP_LORA_CONFIRMED_PACKET_ALWAYS
+	bool "Always use confirmed packets"
+	help
+	  If set, will always use confirmed packets
+
 config APP_LORA_CONFIRMED_PACKET_AFTER
 	int "Number of unconfirmed packets before confirmed packet"
 	default 20
 	range 0 100
+	depends on !APP_LORA_CONFIRMED_PACKET_ALWAYS
 	help
 	  Number of unconfirmed uplink packets that are sent before a confirmed packet is sent.
-	  Set to 0 to disabled
+	  Set to 0 to disable
 
 config APP_LORA_USE_SPECIFIC_DATARATE
 	bool "Use specific datarate"

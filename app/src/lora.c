@@ -22,6 +22,10 @@
 
 LOG_MODULE_REGISTER(lora, CONFIG_APP_LORA_LOG_LEVEL);
 
+#if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
+static uint8_t unconfirmed_packets = CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER;
+#endif
+
 #ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
 static void lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len,
 			  const uint8_t *hex_data);
@@ -146,11 +150,33 @@ int lora_setup(void)
 	return 0;
 }
 
-int lora_send_message(uint8_t *data, uint16_t length, bool confirmed, uint8_t attempts)
+int lora_send_message(uint8_t *data, uint16_t length, bool force_confirmed, uint8_t attempts)
 {
 	int rc = 0;
+	bool confirmed = false;
 
 	while (attempts > 0) {
+#if CONFIG_APP_LORA_CONFIRMED_PACKET_ALWAYS
+		confirmed = true;
+#elif CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
+		confirmed = unconfirmed_packets == CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER ? true : false;
+#endif
+
+
+		if (force_confirmed == true) {
+			confirmed = true;
+#if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
+		} else if (confirmed == false) {
+			++unconfirmed_packets;
+
+			if (unconfirmed_packets == CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER) {
+				unconfirmed_packets = 0;
+			} else {
+				++unconfirmed_packets;
+			}
+#endif
+		}
+
 		rc = lorawan_send(1, data, length, (confirmed == true ? LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
 
 		if (rc < 0) {
