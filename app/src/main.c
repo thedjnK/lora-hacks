@@ -6,6 +6,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/settings/settings.h>
 #include "settings.h"
 #include "sensor.h"
 #include "lora.h"
@@ -21,6 +22,7 @@ LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
 #define SENSOR_READING_TIME K_SECONDS(CONFIG_APP_SENSOR_READING_TIME)
 #define SEND_ATTEMPTS 3
+#define ADC_OFFSET_DEFAULT_MV 800
 
 enum lora_uplink_types {
 	LORA_UPLINK_TYPE_STARTUP,
@@ -32,6 +34,7 @@ enum lora_uplink_types {
 
 enum lora_downlink_types {
 	LORA_DOWNLINK_TYPE_IR,
+	LORA_DOWNLINK_TYPE_SETTING,
 };
 
 int main(void)
@@ -130,6 +133,18 @@ first_start:
 
 			if (rc != 0) {
 				lora_data[data_size++] = LORA_UPLINK_TYPE_ERROR_ADC;
+			} else {
+				uint16_t adc_offset;
+
+			        rc = settings_runtime_get("app/power_offset", (uint8_t *)&adc_offset, sizeof(adc_offset));
+
+				if (rc != sizeof(adc_offset) || adc_offset == 0) {
+					/* No offset, use default */
+					adc_offset = ADC_OFFSET_DEFAULT_MV;
+				}
+
+				voltage -= adc_offset;
+				rc = 0;
 			}
 		}
 #endif
@@ -190,6 +205,15 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 				break;
 			}
 #endif
+
+#ifdef CONFIG_ADC
+			case LORA_DOWNLINK_TYPE_SETTING:
+			{
+				setting_lora(data[1], &data[2], (len - 2));
+				break;
+			}
+#endif
+
 			default:
 			{
 				LOG_ERR("No handler for LoRa Downlink type %d", data[0]);

@@ -6,7 +6,10 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
+#include <zephyr/logging/log.h>
 #include "settings.h"
+
+LOG_MODULE_REGISTER(app_settings, CONFIG_APP_SETTINGS_LOG_LEVEL);
 
 #define MAX_SETTING_KEY_LENGTH 20
 
@@ -263,3 +266,27 @@ void app_keys_clear(void)
 
 SETTINGS_STATIC_HANDLER_DEFINE(app, "app", app_handle_get, app_handle_set,
 			       app_handle_commit, app_handle_export);
+
+
+#ifdef CONFIG_ADC
+void setting_lora(enum lora_setting_index index, uint8_t *data, uint8_t data_size)
+{
+	switch (index) {
+		case LORA_SETTING_INDEX_ADC_OFFSET:
+		{
+			if (data_size == POWER_OFFSET_MV_SIZE) {
+				(void)settings_runtime_set("app/power_offset", data, data_size);
+			} else {
+				LOG_ERR("Invalid ADC offset length: %d", data_size);
+			}
+
+			break;
+		}
+
+		default:
+		{
+			LOG_ERR("Invalid LoRa setting index: %d", index);
+		}
+	};
+}
+#endif

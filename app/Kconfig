@@ -151,6 +151,14 @@ module = APP_SENSOR
 module-str = Sensor
 source "subsys/logging/Kconfig.template.log_config"
 
+module = APP_HFCLK
+module-str = HFCLK
+source "subsys/logging/Kconfig.template.log_config"
+
+module = APP_SETTINGS
+module-str = Settings
+source "subsys/logging/Kconfig.template.log_config"
+
 if ADC
 
 module = APP_ADC
@@ -171,10 +179,6 @@ if APP_IR_LED
 
 module = APP_IR_LED
 module-str = IR LED
-source "subsys/logging/Kconfig.template.log_config"
-
-module = APP_HFCLK
-module-str = HFCLK
 source "subsys/logging/Kconfig.template.log_config"
 
 endif # APP_INFRARED_LED

@@ -9,6 +9,12 @@
 #define LORA_APP_KEY_SIZE 16
 #define POWER_OFFSET_MV_SIZE 2
 
+enum lora_setting_index {
+	LORA_SETTING_INDEX_ADC_OFFSET,
+
+	LORA_SETTING_INDEX_COUNT
+};
+
 /* Load LoRa keys */
 void lora_keys_load(void);
 
@@ -20,3 +26,6 @@ void app_keys_load(void);
 
 /* Clear application keys */
 void app_keys_clear(void);
+
+/* Set settina (from LoRa) */
+void setting_lora(enum lora_setting_index index, uint8_t *data, uint8_t data_size);
