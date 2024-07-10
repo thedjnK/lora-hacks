@@ -71,11 +71,6 @@ int adc_read_internal(uint16_t *voltage)
 
 	conversion = ((adc_value * 1000) / 1024 * 1200 * 3) / 1000;
 
-#ifdef CONFIG_APP_EXTERNAL_DCDC
-	/* Apply 2xBAS16 offset */
-	conversion += 500;
-#endif
-
 	*voltage = conversion;
 
 	LOG_INF("Power: %dmV", conversion);

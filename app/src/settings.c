@@ -17,7 +17,7 @@ static uint8_t lora_dev_eui[LORA_DEV_EUI_SIZE];
 static uint8_t lora_join_eui[LORA_JOIN_EUI_SIZE];
 static uint8_t lora_app_key[LORA_APP_KEY_SIZE];
 
-#ifdef CONFIG_ADC
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 static uint16_t power_offset_mv;
 #endif
 
@@ -177,7 +177,7 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 	name_len = settings_name_next(name, &next);
 
 	if (!next) {
-#ifdef CONFIG_ADC
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 		if (strncmp(name, "power_offset", name_len) == 0) {
 			if (len != sizeof(power_offset_mv)) {
 				return -EINVAL;
@@ -224,7 +224,7 @@ finish:
 
 static int app_handle_export(int (*cb)(const char *name, const void *value, size_t val_len))
 {
-#ifdef CONFIG_ADC
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 	(void)cb("app/power_offset", &power_offset_mv, sizeof(power_offset_mv));
 #endif
 
@@ -240,7 +240,7 @@ static int app_handle_get(const char *name, char *val, int val_len_max)
 {
 	const char *next;
 
-#ifdef CONFIG_ADC
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 	if (settings_name_steq(name, "power_offset", &next) && !next) {
 		if (val_len_max < sizeof(power_offset_mv)) {
 			return -E2BIG;
@@ -268,7 +268,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(app, "app", app_handle_get, app_handle_set,
 			       app_handle_commit, app_handle_export);
 
 
-#ifdef CONFIG_ADC
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t data_size)
 {
 	switch (index) {

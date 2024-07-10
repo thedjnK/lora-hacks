@@ -22,7 +22,7 @@ LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
 #define SENSOR_READING_TIME K_SECONDS(CONFIG_APP_SENSOR_READING_TIME)
 #define SEND_ATTEMPTS 3
-#define ADC_OFFSET_DEFAULT_MV 800
+#define ADC_OFFSET_DEFAULT_MV 500
 
 enum lora_uplink_types {
 	LORA_UPLINK_TYPE_STARTUP,
@@ -62,6 +62,7 @@ int main(void)
 	adc_setup();
 #endif
 
+rc = 0;
 	if (rc != 0) {
 		LOG_ERR("Sensor setup failed: cannot continue");
 		return 0;
@@ -134,7 +135,8 @@ first_start:
 			if (rc != 0) {
 				lora_data[data_size++] = LORA_UPLINK_TYPE_ERROR_ADC;
 			} else {
-				uint16_t adc_offset;
+#ifdef CONFIG_APP_EXTERNAL_DCDC
+				int16_t adc_offset;
 
 			        rc = settings_runtime_get("app/power_offset", (uint8_t *)&adc_offset, sizeof(adc_offset));
 
@@ -143,8 +145,10 @@ first_start:
 					adc_offset = ADC_OFFSET_DEFAULT_MV;
 				}
 
-				voltage -= adc_offset;
+				voltage += adc_offset;
+
 				rc = 0;
+#endif
 			}
 		}
 #endif
@@ -170,7 +174,7 @@ first_start:
 			lora_data[data_size++] = rc & 0xff;
 		}
 
-		rc = lora_send_message(lora_data, sizeof(lora_data), false, SEND_ATTEMPTS);
+		rc = lora_send_message(lora_data, data_size, false, SEND_ATTEMPTS);
 
 		if (rc == 0) {
 			LOG_INF("Message sent");
@@ -206,7 +210,7 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 			}
 #endif
 
-#ifdef CONFIG_ADC
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 			case LORA_DOWNLINK_TYPE_SETTING:
 			{
 				setting_lora(data[1], &data[2], (len - 2));
