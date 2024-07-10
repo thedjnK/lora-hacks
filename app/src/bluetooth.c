@@ -18,7 +18,6 @@ static struct k_work advertise_work;
 static struct k_work button_work;
 
 static void stop_advertising_function(struct k_timer *timer_id);
-static void blink_timer_function(struct k_timer *timer_id);
 static bool continue_advert = false;
 static bool in_connection = false;
 
@@ -26,7 +25,6 @@ static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios)
 static struct gpio_callback button_cb_data;
 
 K_TIMER_DEFINE(stop_advertising_timer, stop_advertising_function, NULL);
-K_TIMER_DEFINE(blink_timer, blink_timer_function, NULL);
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -41,23 +39,20 @@ static const struct bt_data sd[] = {
 
 static void stop_advertising_function(struct k_timer *timer_id)
 {
-	k_timer_stop(&blink_timer);
 	continue_advert = false;
 
 	if (in_connection == false) {
+		led_off(LED_BLUE);
 		bt_le_adv_stop();
 	}
-}
-
-static void blink_timer_function(struct k_timer *timer_id)
-{
-	led_blink(LED_BLUE, K_MSEC(50));
 }
 
 static void do_advert(void)
 {
 	if (continue_advert == true) {
 		k_work_submit(&advertise_work);
+	} else {
+		led_off(LED_BLUE);
 	}
 }
 
@@ -75,17 +70,16 @@ static void advertise(struct k_work *work)
 static void advertise2(struct k_work *work)
 {
 	k_timer_start(&stop_advertising_timer, K_SECONDS(20), K_NO_WAIT);
-//	k_timer_start(&blink_timer, K_MSEC(800), K_MSEC(800));
 
 	if (continue_advert == false) {
+		led_on(LED_BLUE);
+
 		continue_advert = true;
 
 		if (in_connection == false) {
 			advertise(NULL);
 		}
 	}
-
-//	led_blink(LED_BLUE, K_MSEC(50));
 }
 
 static void connected(struct bt_conn *conn, uint8_t err)
