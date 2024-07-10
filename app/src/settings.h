@@ -28,4 +28,4 @@ void app_keys_load(void);
 void app_keys_clear(void);
 
 /* Set settina (from LoRa) */
-void setting_lora(enum lora_setting_index index, uint8_t *data, uint8_t data_size);
+void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t data_size);

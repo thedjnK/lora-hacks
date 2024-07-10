@@ -269,7 +269,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(app, "app", app_handle_get, app_handle_set,
 
 
 #ifdef CONFIG_ADC
-void setting_lora(enum lora_setting_index index, uint8_t *data, uint8_t data_size)
+void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t data_size)
 {
 	switch (index) {
 		case LORA_SETTING_INDEX_ADC_OFFSET:
