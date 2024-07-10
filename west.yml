@@ -8,7 +8,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyr
-      revision: main
+      revision: pull/75197/head
       import:
         name-allowlist:
           - cmsis
