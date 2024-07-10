@@ -52,6 +52,7 @@ int main(void)
 	peripheral_setup();
 	(void)leds_init();
 	lora_keys_load();
+	app_keys_load();
 	rc = sensor_setup();
 
 #ifdef CONFIG_ADC

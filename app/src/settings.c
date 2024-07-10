@@ -14,6 +14,10 @@ static uint8_t lora_dev_eui[LORA_DEV_EUI_SIZE];
 static uint8_t lora_join_eui[LORA_JOIN_EUI_SIZE];
 static uint8_t lora_app_key[LORA_APP_KEY_SIZE];
 
+#ifdef CONFIG_ADC
+static uint16_t power_offset_mv;
+#endif
+
 static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb read_cb,
 				void *cb_arg)
 {
@@ -69,7 +73,6 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			rc = 0;
 		}
-
 	}
 
 	if (output != NULL) {
@@ -155,3 +158,108 @@ void lora_keys_clear(void)
 
 SETTINGS_STATIC_HANDLER_DEFINE(lora_keys, "lora_keys", lora_keys_handle_get, lora_keys_handle_set,
 			       lora_keys_handle_commit, lora_keys_handle_export);
+
+
+/* Application settings */
+
+static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb,
+				void *cb_arg)
+{
+	const char *next;
+	size_t name_len;
+	int rc = -ENOENT;
+	uint8_t *output = NULL;
+	uint8_t output_size;
+
+	name_len = settings_name_next(name, &next);
+
+	if (!next) {
+#ifdef CONFIG_ADC
+		if (strncmp(name, "power_offset", name_len) == 0) {
+			if (len != sizeof(power_offset_mv)) {
+				return -EINVAL;
+			}
+
+			output = (uint8_t *)&power_offset_mv;
+			output_size = sizeof(power_offset_mv);
+			rc = read_cb(cb_arg, &power_offset_mv, sizeof(power_offset_mv));
+
+			if (rc < 0) {
+				goto finish;
+			}
+
+			rc = 0;
+		}
+#endif
+	}
+
+	if (output != NULL) {
+		if (len != output_size) {
+			return -EINVAL;
+		}
+
+		rc = read_cb(cb_arg, output, output_size);
+
+		if (rc < 0) {
+			goto finish;
+		}
+
+		rc = 0;
+	}
+
+	if (rc == 0) {
+		uint8_t key_name[MAX_SETTING_KEY_LENGTH] = "app/";
+
+		strcpy(&key_name[strlen(key_name)], name);
+
+		rc = settings_save_one(key_name, output, len);
+	}
+
+finish:
+	return rc;
+}
+
+static int app_handle_export(int (*cb)(const char *name, const void *value, size_t val_len))
+{
+#ifdef CONFIG_ADC
+	(void)cb("app/power_offset", &power_offset_mv, sizeof(power_offset_mv));
+#endif
+
+	return 0;
+}
+
+static int app_handle_commit(void)
+{
+	return 0;
+}
+
+static int app_handle_get(const char *name, char *val, int val_len_max)
+{
+	const char *next;
+
+#ifdef CONFIG_ADC
+	if (settings_name_steq(name, "power_offset", &next) && !next) {
+		if (val_len_max < sizeof(power_offset_mv)) {
+			return -E2BIG;
+		}
+
+		memcpy(val, &power_offset_mv, sizeof(power_offset_mv));
+		return sizeof(power_offset_mv);
+	}
+#endif
+
+	return -ENOENT;
+}
+
+void app_keys_load(void)
+{
+	settings_load_subtree("app");
+}
+
+void app_keys_clear(void)
+{
+	(void)settings_delete("app");
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(app, "app", app_handle_get, app_handle_set,
+			       app_handle_commit, app_handle_export);

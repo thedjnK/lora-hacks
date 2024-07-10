@@ -171,6 +171,60 @@ static int lora_app_key_handler(const struct shell *sh, size_t argc, char **argv
 	return rc;
 }
 
+#ifdef CONFIG_ADC
+static int app_power_offset_handler(const struct shell *sh, size_t argc, char **argv)
+{
+	int rc = -EINVAL;
+	uint8_t power_offset[POWER_OFFSET_MV_SIZE] = { 0 };
+
+	if (argc == READ_ARGS) {
+		/* Read */
+		uint8_t print_buffer[POWER_OFFSET_MV_SIZE * 2 + 1] = { 0 };
+
+		rc = settings_runtime_get("app/power_offset", power_offset, sizeof(power_offset));
+
+		if (rc == sizeof(power_offset)) {
+			rc = bin2hex(power_offset, sizeof(power_offset), print_buffer, sizeof(print_buffer));
+
+			if (rc == (POWER_OFFSET_MV_SIZE * 2)) {
+				shell_print(sh, "power offset: %s", print_buffer);
+				rc = 0;
+			} else {
+				shell_error(sh, "Failed to convert to hex: %d", rc);
+			}
+		} else if (rc >= 0) {
+			shell_error(sh, "Invalid setting size");
+		} else {
+			shell_error(sh, "Invalid setting response: %d", rc);
+		}
+	} else if (argc == WRITE_ARGS) {
+		/* Write */
+		size_t data_size = strlen(argv[1]);
+
+		if (data_size == (POWER_OFFSET_MV_SIZE * 2)) {
+			rc = hex2bin(argv[1], data_size, power_offset, sizeof(power_offset));
+
+			if (rc == sizeof(power_offset)) {
+				rc = settings_runtime_set("app/power_offset", power_offset, sizeof(power_offset));
+				if (rc == 0) {
+					shell_print(sh, "power offset updated");
+				} else {
+					shell_print(sh, "Failed to update power offset: %d", rc);
+				}
+			} else {
+				shell_error(sh, "Invalid power offset size");
+			}
+		} else {
+			shell_error(sh, "Invalid power offset size");
+		}
+	} else {
+		shell_error(sh, "Invalid number of arguments");
+	}
+
+	return rc;
+}
+#endif
+
 #if 0
 static int lora_dev_nonce_handler(const struct shell *sh, size_t argc, char **argv)
 {
@@ -249,6 +303,10 @@ SHELL_STATIC_SUBCMD_SET_CREATE(app_cmd,
 	SHELL_CMD(disable, NULL, "Disable fetching readings", app_enable_handler),
 	SHELL_CMD(enable, NULL, "Enable fetching readings", app_enable_handler),
 	SHELL_CMD(status, NULL, "Show device status", app_status_handler),
+
+#ifdef CONFIG_ADC
+	SHELL_CMD(power_offset, NULL, "Get/set application power offset (mV)", app_power_offset_handler),
+#endif
 
 	/* Array terminator. */
 	SHELL_SUBCMD_SET_END
