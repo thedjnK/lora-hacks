@@ -210,13 +210,11 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 			}
 #endif
 
-#ifdef CONFIG_APP_EXTERNAL_DCDC
 			case LORA_DOWNLINK_TYPE_SETTING:
 			{
 				setting_lora(data[1], &data[2], (len - 2));
 				break;
 			}
-#endif
 
 			default:
 			{

@@ -11,7 +11,7 @@
 
 LOG_MODULE_REGISTER(app_settings, CONFIG_APP_SETTINGS_LOG_LEVEL);
 
-#define MAX_SETTING_KEY_LENGTH 20
+#define MAX_SETTING_KEY_LENGTH 24
 
 static uint8_t lora_dev_eui[LORA_DEV_EUI_SIZE];
 static uint8_t lora_join_eui[LORA_JOIN_EUI_SIZE];
@@ -19,6 +19,10 @@ static uint8_t lora_app_key[LORA_APP_KEY_SIZE];
 
 #ifdef CONFIG_APP_EXTERNAL_DCDC
 static uint16_t power_offset_mv;
+#endif
+
+#ifdef CONFIG_BT
+static uint8_t bluetooth_device_name[BLUETOOTH_DEVICE_NAME_SIZE] = CONFIG_BT_DEVICE_NAME;
 #endif
 
 static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb read_cb,
@@ -40,13 +44,13 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			output = lora_dev_eui;
 			output_size = sizeof(lora_dev_eui);
-			rc = read_cb(cb_arg, lora_dev_eui, sizeof(lora_dev_eui));
+/*			rc = read_cb(cb_arg, lora_dev_eui, sizeof(lora_dev_eui));
 
 			if (rc < 0) {
 				goto finish;
 			}
 
-			rc = 0;
+			rc = 0;*/
 		} else if (strncmp(name, "join_eui", name_len) == 0) {
 			if (len != sizeof(lora_join_eui)) {
 				return -EINVAL;
@@ -54,13 +58,13 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			output = lora_join_eui;
 			output_size = sizeof(lora_join_eui);
-			rc = read_cb(cb_arg, lora_join_eui, sizeof(lora_join_eui));
+/*			rc = read_cb(cb_arg, lora_join_eui, sizeof(lora_join_eui));
 
 			if (rc < 0) {
 				goto finish;
 			}
 
-			rc = 0;
+			rc = 0;*/
 		} else if (strncmp(name, "app_key", name_len) == 0) {
 			if (len != sizeof(lora_app_key)) {
 				return -EINVAL;
@@ -68,13 +72,13 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			output = lora_app_key;
 			output_size = sizeof(lora_app_key);
-			rc = read_cb(cb_arg, lora_app_key, sizeof(lora_app_key));
+/*			rc = read_cb(cb_arg, lora_app_key, sizeof(lora_app_key));
 
 			if (rc < 0) {
 				goto finish;
 			}
 
-			rc = 0;
+			rc = 0;*/
 		}
 	}
 
@@ -185,7 +189,30 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 
 			output = (uint8_t *)&power_offset_mv;
 			output_size = sizeof(power_offset_mv);
-			rc = read_cb(cb_arg, &power_offset_mv, sizeof(power_offset_mv));
+/*			rc = read_cb(cb_arg, &power_offset_mv, sizeof(power_offset_mv));
+
+			if (rc < 0) {
+				goto finish;
+			}
+
+			rc = 0;*/
+		}
+#endif
+
+#ifdef CONFIG_BT
+		if (strncmp(name, "bluetooth_name", name_len) == 0) {
+			if (len == 0 || len >= sizeof(bluetooth_device_name) || ((uint8_t *)cb_arg)[len] != 0) {
+				return -EINVAL;
+			}
+
+uint8_t tmp[len+1];
+memcpy(tmp, cb_arg, len);
+tmp[len] = 0;
+
+//			output = bluetooth_device_name;
+//			output_size = sizeof(bluetooth_device_name);
+			rc = read_cb(cb_arg, bluetooth_device_name, sizeof(bluetooth_device_name));
+//			rc = read_cb(tmp, bluetooth_device_name, sizeof(bluetooth_device_name));
 
 			if (rc < 0) {
 				goto finish;
@@ -228,6 +255,10 @@ static int app_handle_export(int (*cb)(const char *name, const void *value, size
 	(void)cb("app/power_offset", &power_offset_mv, sizeof(power_offset_mv));
 #endif
 
+#ifdef CONFIG_BT
+	(void)cb("app/bluetooth_name", bluetooth_device_name, strlen(bluetooth_device_name));
+#endif
+
 	return 0;
 }
 
@@ -251,6 +282,17 @@ static int app_handle_get(const char *name, char *val, int val_len_max)
 	}
 #endif
 
+#ifdef CONFIG_BT
+	if (settings_name_steq(name, "bluetooth_name", &next) && !next) {
+		if (val_len_max < strlen(bluetooth_device_name)) {
+			return -E2BIG;
+		}
+
+		memcpy(val, bluetooth_device_name, strlen(bluetooth_device_name));
+		return strlen(bluetooth_device_name);
+	}
+#endif
+
 	return -ENOENT;
 }
 
@@ -268,10 +310,10 @@ SETTINGS_STATIC_HANDLER_DEFINE(app, "app", app_handle_get, app_handle_set,
 			       app_handle_commit, app_handle_export);
 
 
-#ifdef CONFIG_APP_EXTERNAL_DCDC
 void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t data_size)
 {
 	switch (index) {
+#ifdef CONFIG_APP_EXTERNAL_DCDC
 		case LORA_SETTING_INDEX_ADC_OFFSET:
 		{
 			if (data_size == POWER_OFFSET_MV_SIZE) {
@@ -282,6 +324,20 @@ void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t da
 
 			break;
 		}
+#endif
+
+#ifdef CONFIG_BT
+		case LORA_SETTING_INDEX_BLUETOOTH_DEVICE_NAME:
+		{
+			if (data_size > 0 && data_size <= BLUETOOTH_DEVICE_NAME_SIZE) {
+				(void)settings_runtime_set("app/bluetooth_name", data, data_size);
+			} else {
+				LOG_ERR("Invalid Bluetooth device name length: %d", data_size);
+			}
+
+			break;
+		}
+#endif
 
 		default:
 		{
@@ -289,4 +345,3 @@ void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t da
 		}
 	};
 }
-#endif

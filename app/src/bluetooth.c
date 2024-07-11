@@ -8,8 +8,10 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 #include "bluetooth.h"
+#include "settings.h"
 #include "leds.h"
 
 LOG_MODULE_REGISTER(bluetooth, CONFIG_APP_BLUETOOTH_LOG_LEVEL);
@@ -33,8 +35,10 @@ static const struct bt_data ad[] = {
 		      0xd3, 0x4c, 0xb7, 0x1d, 0x1d, 0xdc, 0x53, 0x8d),
 };
 
-static const struct bt_data sd[] = {
-	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+static uint8_t device_name[BLUETOOTH_DEVICE_NAME_SIZE] = CONFIG_BT_DEVICE_NAME;
+
+static struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, device_name, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
 static void stop_advertising_function(struct k_timer *timer_id)
@@ -59,6 +63,23 @@ static void do_advert(void)
 static void advertise(struct k_work *work)
 {
 	int rc;
+	uint8_t device_name[BLUETOOTH_DEVICE_NAME_SIZE] = { 0 };
+
+	/* Get device name to advertise with */
+	rc = settings_runtime_get("app/bluetooth_name", device_name, sizeof(device_name));
+
+	if (rc <= 0 || device_name[0] == 0x00) {
+		strcpy(device_name, CONFIG_BT_DEVICE_NAME);
+		LOG_INF("Device name not set, using default");
+	} else {
+		rc = bt_set_name((char *)device_name);
+
+		if (rc) {
+			LOG_ERR("Device name set failed: %d", rc);
+		}
+
+		sd->data_len = strlen(device_name);
+	}
 
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
