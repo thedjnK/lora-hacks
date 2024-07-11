@@ -101,6 +101,12 @@ config APP_POWER_DOWN_EXTERNAL_SENSOR
 	  If enabled, will power down the external sensor port when it is not in use, but will lose
 	  the configuration of the sensor if it is configured by the driver at start-up.
 
+config APP_BT_ADVERTISE_ON_START
+	bool "Advertise on start-up"
+	depends on BT
+	help
+	  If enabled, will advertise at device start-up or reset.
+
 config APP_TYPE
 	hex
 	default 0x34 if DT_HAS_AOSONG_DHT11_ENABLED && APP_IR_LED && ADC

@@ -149,5 +149,9 @@ int bluetooth_init(void)
 	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
 	gpio_add_callback(button.port, &button_cb_data);
 
+#ifdef CONFIG_APP_BT_ADVERTISE_ON_START
+	k_work_submit(&button_work);
+#endif
+
 	return rc;
 }
