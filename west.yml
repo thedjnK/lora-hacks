@@ -7,14 +7,13 @@ manifest:
 
   projects:
     - name: zephyr
-      remote: zephyr
-      revision: pull/75197/head
+      remote: thedjnK
+      revision: nrf51btbranch
       import:
         name-allowlist:
           - cmsis
           - hal_nordic
           - loramac-node
-          - mcuboot
           - picolibc
           - tinycrypt
           - zcbor
