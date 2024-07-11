@@ -8,6 +8,10 @@ common:
 tests:
   lora-hacks.si7021:
     tags: default
+  lora-hacks.si7021.bluetooth:
+      - EXTRA_CONF_FILE="bluetooth.conf"
+  lora-hacks.si7021.bluetooth.thread.analyser:
+      - EXTRA_CONF_FILE="bluetooth.conf;thread_analyser.conf"
   lora-hacks.si7021.debug:
     extra_args:
       - FILE_SUFFIX="debug"
@@ -28,6 +32,14 @@ tests:
       - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
       - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
       - FILE_SUFFIX="debug"
+  lora-hacks.bme680.external_dcdc.ir_led.bluetooth:
+    extra_args:
+      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf;bluetooth.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+  lora-hacks.bme680.external_dcdc.ir_led.bluetooth.thread.analyser:
+    extra_args:
+      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf;bluetooth.conf;thread_analyser.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
 #  lora-hacks.dht11:
 #    extra_args:
 #      - EXTRA_CONF_FILE="dht11.overlay"
