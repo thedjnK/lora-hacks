@@ -56,13 +56,21 @@ int main(void)
 	(void)leds_init();
 	lora_keys_load();
 	app_keys_load();
+
+#ifdef CONFIG_BT
+	rc = bluetooth_init();
+
+	if (rc != 0) {
+		LOG_ERR("Bluetooth setup failed");
+	}
+#endif
+
 	rc = sensor_setup();
 
 #ifdef CONFIG_ADC
 	adc_setup();
 #endif
 
-rc = 0;
 	if (rc != 0) {
 		LOG_ERR("Sensor setup failed: cannot continue");
 		return 0;
@@ -86,14 +94,6 @@ rc = 0;
 		LOG_ERR("LoRa setup failed: cannot continue");
 		return 0;
 	}
-
-#ifdef CONFIG_BT
-	rc = bluetooth_init();
-
-	if (rc != 0) {
-		LOG_ERR("Bluetooth setup failed: cannot continue");
-	}
-#endif
 
 	/* Send connect message with version and application type */
 	data_size = 0;
