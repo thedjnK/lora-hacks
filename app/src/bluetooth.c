@@ -78,6 +78,7 @@ static void advertise(struct k_work *work)
 			LOG_ERR("Device name set failed: %d", rc);
 		}
 
+		sd->data = device_name;
 		sd->data_len = strlen(device_name);
 	}
 

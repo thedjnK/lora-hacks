@@ -32,7 +32,7 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 	size_t name_len;
 	int rc = -ENOENT;
 	uint8_t *output = NULL;
-	uint8_t output_size;
+	uint8_t output_size = 0;
 
 	name_len = settings_name_next(name, &next);
 
@@ -176,7 +176,7 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 	size_t name_len;
 	int rc = -ENOENT;
 	uint8_t *output = NULL;
-	uint8_t output_size;
+	uint8_t output_size = 0;
 
 	name_len = settings_name_next(name, &next);
 
@@ -201,24 +201,14 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 
 #ifdef CONFIG_BT
 		if (strncmp(name, "bluetooth_name", name_len) == 0) {
-			if (len == 0 || len >= sizeof(bluetooth_device_name) || ((uint8_t *)cb_arg)[len] != 0) {
+			if (len == 0 || len >= sizeof(bluetooth_device_name) || ((uint8_t *)cb_arg)[len] == 0) {
 				return -EINVAL;
 			}
 
-uint8_t tmp[len+1];
-memcpy(tmp, cb_arg, len);
-tmp[len] = 0;
-
-//			output = bluetooth_device_name;
-//			output_size = sizeof(bluetooth_device_name);
-			rc = read_cb(cb_arg, bluetooth_device_name, sizeof(bluetooth_device_name));
-//			rc = read_cb(tmp, bluetooth_device_name, sizeof(bluetooth_device_name));
-
-			if (rc < 0) {
-				goto finish;
-			}
-
-			rc = 0;
+			output = bluetooth_device_name;
+			output_size = sizeof(bluetooth_device_name);
+			memset(bluetooth_device_name, 0, sizeof(bluetooth_device_name));
+			goto save;
 		}
 #endif
 	}
@@ -228,6 +218,7 @@ tmp[len] = 0;
 			return -EINVAL;
 		}
 
+save:
 		rc = read_cb(cb_arg, output, output_size);
 
 		if (rc < 0) {
