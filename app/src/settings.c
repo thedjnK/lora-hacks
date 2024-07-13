@@ -44,13 +44,6 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			output = lora_dev_eui;
 			output_size = sizeof(lora_dev_eui);
-/*			rc = read_cb(cb_arg, lora_dev_eui, sizeof(lora_dev_eui));
-
-			if (rc < 0) {
-				goto finish;
-			}
-
-			rc = 0;*/
 		} else if (strncmp(name, "join_eui", name_len) == 0) {
 			if (len != sizeof(lora_join_eui)) {
 				return -EINVAL;
@@ -58,13 +51,6 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			output = lora_join_eui;
 			output_size = sizeof(lora_join_eui);
-/*			rc = read_cb(cb_arg, lora_join_eui, sizeof(lora_join_eui));
-
-			if (rc < 0) {
-				goto finish;
-			}
-
-			rc = 0;*/
 		} else if (strncmp(name, "app_key", name_len) == 0) {
 			if (len != sizeof(lora_app_key)) {
 				return -EINVAL;
@@ -72,13 +58,6 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 			output = lora_app_key;
 			output_size = sizeof(lora_app_key);
-/*			rc = read_cb(cb_arg, lora_app_key, sizeof(lora_app_key));
-
-			if (rc < 0) {
-				goto finish;
-			}
-
-			rc = 0;*/
 		}
 	}
 
@@ -189,13 +168,6 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 
 			output = (uint8_t *)&power_offset_mv;
 			output_size = sizeof(power_offset_mv);
-/*			rc = read_cb(cb_arg, &power_offset_mv, sizeof(power_offset_mv));
-
-			if (rc < 0) {
-				goto finish;
-			}
-
-			rc = 0;*/
 		}
 #endif
 
