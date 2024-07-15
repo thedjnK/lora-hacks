@@ -1,0 +1,40 @@
+#
+# Copyright (c) 2024, Jamie M.
+#
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+#
+
+# The Kconfig file is dedicated to the LoRa transport of MCUmgr
+# subsystem and provides Kconfig options to control aspects of
+# the transport.
+#
+# Options defined in this file should be prefixed:
+#  MCUMGR_TRANSPORT_LORA_
+
+menuconfig MCUMGR_TRANSPORT_LORA
+	bool "LoRa MCUmgr SMP transport"
+	help
+	  Enables handling of SMP commands received over LoRa.
+
+if MCUMGR_TRANSPORT_LORA
+
+config MCUMGR_TRANSPORT_LORA_PORT
+	int "LoRa SMP port"
+	range 0 120
+	default 2
+	help
+	  LoRa download and uplink for communication. All messages received on this port will be
+	  treated as SMP packets.
+
+config MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS
+	bool "Use confirmed packets for uplinks"
+	default y
+	help
+	  Will use confirmed uplink packets for responses if enabled, otherwise will use
+	  unconfirmed packets.
+
+module = MCUMGR_TRANSPORT_LORA
+module-str = LoRa MCUmgr SMP transport
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # MCUMGR_TRANSPORT_LORA

@@ -1,0 +1,16 @@
+#
+# Copyright (c) 2024, Jamie M.
+#
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+#
+
+config MCUMGR_TRANSPORT_NETBUF_COUNT
+	default 2 if MCUMGR_TRANSPORT_LORA
+
+config MCUMGR_TRANSPORT_NETBUF_SIZE
+	default 222 if MCUMGR_TRANSPORT_LORA
+
+config MCUMGR_TRANSPORT_NETBUF_MIN_USER_DATA_SIZE
+	default 0 if MCUMGR_TRANSPORT_LORA && !MCUMGR_TRANSPORT_BT
+
+rsource "Kconfig.lora"
