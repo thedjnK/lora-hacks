@@ -14,7 +14,7 @@ config APP_SENSOR_READING_TIME
 config APP_LORA_CONFIRMED_PACKET_ALWAYS
 	bool "Always use confirmed packets"
 	help
-	  If set, will always use confirmed packets
+	  If set, will always use confirmed packets for application LoRa messages
 
 config APP_LORA_CONFIRMED_PACKET_AFTER
 	int "Number of unconfirmed packets before confirmed packet"
