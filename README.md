@@ -6,7 +6,7 @@ This is an unofficial firmware for the RS1xx sensor. It supports:
 * LoRa 
 * On-board si7021 sensor 
 * (Custom) external battery measurement 
-* (Custom) external sensors (bme680, dht11) 
+* (Custom) external sensors (bme680, etc.) 
 * (Custom) external IR LED for controlling one specific model of mitsubishi heavy industries HVAC 
 * LoRa MCUmgr protocol 
 * Remotely (LoRa) or locally (Bluetooth) changing of device settings (LoRa keys, external battery measurement offset, device name) 
