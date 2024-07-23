@@ -1,0 +1,8 @@
+/ {
+	ext_power: ext_power {
+		compatible = "regulator-fixed";
+		enable-gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+		regulator-name = "ext_power";
+		regulator-boot-on;
+	};
+};
