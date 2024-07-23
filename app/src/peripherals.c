@@ -17,7 +17,6 @@ void peripheral_setup(void)
 	/* Who cares about any of this */
 	NRF_LPCOMP->POWER = 0;
 	NRF_QDEC->POWER = 0;
-	NRF_TIMER1->POWER = 0;
 	NRF_TIMER2->POWER = 0;
 
 #ifndef CONFIG_ADC
@@ -32,6 +31,7 @@ void peripheral_setup(void)
 	NRF_RTC0->POWER = 0;
 	NRF_RNG->POWER = 0;
 	NRF_TIMER0->POWER = 0;
+	NRF_TIMER1->POWER = 0;
 #endif
 
 #ifndef CONFIG_WDT
