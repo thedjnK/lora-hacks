@@ -101,11 +101,31 @@ config APP_POWER_DOWN_EXTERNAL_SENSOR
 	  If enabled, will power down the external sensor port when it is not in use, but will lose
 	  the configuration of the sensor if it is configured by the driver at start-up.
 
+if BT
+
+choice APP_BT_MODE
+	prompt "Bluetooth operating mode"
+	default APP_BT_MODE_ADVERTISE_ON_DEMAND
+
+config APP_BT_MODE_ADVERTISE_ON_DEMAND
+	bool "Advertise on demand"
+	help
+	  If enabled, will advertise only when prompted by a button press or remote LoRa message.
+
+config APP_BT_MODE_ALWAYS_ADVERTISE
+	bool "Always advertise"
+	help
+	  If enabled, will always advertise.
+
+endchoice
+
 config APP_BT_ADVERTISE_ON_START
 	bool "Advertise on start-up"
-	depends on BT
+	depends on APP_BT_MODE_ADVERTISE_ON_DEMAND
 	help
 	  If enabled, will advertise at device start-up or reset.
+
+endif
 
 config APP_TYPE
 	hex

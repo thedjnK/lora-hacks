@@ -23,6 +23,10 @@ static uint16_t power_offset_mv;
 
 #ifdef CONFIG_BT
 static uint8_t bluetooth_device_name[BLUETOOTH_DEVICE_NAME_SIZE] = CONFIG_BT_DEVICE_NAME;
+
+#ifdef CONFIG_BT_FIXED_PASSKEY
+static uint8_t bluetooth_fixed_passkey[BLUETOOTH_FIXED_PASSKEY_SIZE];
+#endif
 #endif
 
 static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb read_cb,
@@ -38,24 +42,12 @@ static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb r
 
 	if (!next) {
 		if (strncmp(name, "dev_eui", name_len) == 0) {
-			if (len != sizeof(lora_dev_eui)) {
-				return -EINVAL;
-			}
-
 			output = lora_dev_eui;
 			output_size = sizeof(lora_dev_eui);
 		} else if (strncmp(name, "join_eui", name_len) == 0) {
-			if (len != sizeof(lora_join_eui)) {
-				return -EINVAL;
-			}
-
 			output = lora_join_eui;
 			output_size = sizeof(lora_join_eui);
 		} else if (strncmp(name, "app_key", name_len) == 0) {
-			if (len != sizeof(lora_app_key)) {
-				return -EINVAL;
-			}
-
 			output = lora_app_key;
 			output_size = sizeof(lora_app_key);
 		}
@@ -162,10 +154,6 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 	if (!next) {
 #ifdef CONFIG_APP_EXTERNAL_DCDC
 		if (strncmp(name, "power_offset", name_len) == 0) {
-			if (len != sizeof(power_offset_mv)) {
-				return -EINVAL;
-			}
-
 			output = (uint8_t *)&power_offset_mv;
 			output_size = sizeof(power_offset_mv);
 		}
@@ -182,6 +170,13 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 			memset(bluetooth_device_name, 0, sizeof(bluetooth_device_name));
 			goto save;
 		}
+
+#ifdef CONFIG_BT_FIXED_PASSKEY
+		if (strncmp(name, "bluetooth_fixed_passkey", name_len) == 0) {
+			output = bluetooth_fixed_passkey;
+			output_size = sizeof(bluetooth_fixed_passkey);
+		}
+#endif
 #endif
 	}
 
@@ -220,6 +215,9 @@ static int app_handle_export(int (*cb)(const char *name, const void *value, size
 
 #ifdef CONFIG_BT
 	(void)cb("app/bluetooth_name", bluetooth_device_name, strlen(bluetooth_device_name));
+#ifdef CONFIG_BT_FIXED_PASSKEY
+	(void)cb("app/bluetooth_fixed_passkey", bluetooth_fixed_passkey, sizeof(bluetooth_fixed_passkey));
+#endif
 #endif
 
 	return 0;
@@ -254,6 +252,17 @@ static int app_handle_get(const char *name, char *val, int val_len_max)
 		memcpy(val, bluetooth_device_name, strlen(bluetooth_device_name));
 		return strlen(bluetooth_device_name);
 	}
+
+#ifdef CONFIG_BT_FIXED_PASSKEY
+	if (settings_name_steq(name, "bluetooth_fixed_passkey", &next) && !next) {
+		if (val_len_max < sizeof(bluetooth_fixed_passkey)) {
+			return -E2BIG;
+		}
+
+		memcpy(val, &bluetooth_fixed_passkey, sizeof(bluetooth_fixed_passkey));
+		return sizeof(bluetooth_fixed_passkey);
+	}
+#endif
 #endif
 
 	return -ENOENT;
@@ -300,6 +309,19 @@ void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t da
 
 			break;
 		}
+
+#ifdef CONFIG_BT_FIXED_PASSKEY
+		case LORA_SETTING_INDEX_BLUETOOTH_FIXED_PASSKEY:
+		{
+			if (data_size == BLUETOOTH_FIXED_PASSKEY_SIZE) {
+				(void)settings_runtime_set("app/bluetooth_fixed_passkey", data, data_size);
+			} else {
+				LOG_ERR("Invalid Bluetooth fixed passkey length: %d", data_size);
+			}
+
+			break;
+		}
+#endif
 #endif
 
 		default:
