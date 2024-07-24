@@ -16,17 +16,24 @@
 
 LOG_MODULE_REGISTER(bluetooth, CONFIG_APP_BLUETOOTH_LOG_LEVEL);
 
-static struct k_work advertise_work;
-static struct k_work button_work;
+#define BUTTON_ALIAS DT_ALIAS(sw0)
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
+#if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
+#define BUTTON_DEVICE GPIO_DT_SPEC_GET(BUTTON_ALIAS, gpios)
+
+static struct k_work button_work;
+static struct gpio_callback button_cb_data;
+static const struct gpio_dt_spec button = BUTTON_DEVICE;
+#endif
+
+static struct k_work advertise_work;
 static void stop_advertising_function(struct k_timer *timer_id);
 static bool continue_advert = false;
 static bool in_connection = false;
 
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
-static struct gpio_callback button_cb_data;
-
 K_TIMER_DEFINE(stop_advertising_timer, stop_advertising_function, NULL);
+#endif
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -41,6 +48,7 @@ static struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, device_name, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 static void stop_advertising_function(struct k_timer *timer_id)
 {
 	continue_advert = false;
@@ -59,6 +67,7 @@ static void do_advert(void)
 		led_off(LED_BLUE);
 	}
 }
+#endif
 
 static void advertise(struct k_work *work)
 {
@@ -82,13 +91,18 @@ static void advertise(struct k_work *work)
 		sd->data_len = strlen(device_name);
 	}
 
+#ifdef CONFIG_APP_BT_MODE_ALWAYS_ADVERTISE
+	rc = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+#else
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+#endif
 
 	if (rc) {
 		LOG_ERR("Advert start failed: %d", rc);
 	}
 }
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 static void advertise2(struct k_work *work)
 {
 	k_timer_start(&stop_advertising_timer, K_SECONDS(20), K_NO_WAIT);
@@ -103,17 +117,28 @@ static void advertise2(struct k_work *work)
 		}
 	}
 }
+#endif
 
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	if (err) {
 		LOG_ERR("Connection failed (err 0x%02x)", err);
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 		do_advert();
+#endif
 	} else {
 		LOG_INF("Connected");
+
+#if defined(CONFIG_BT_SMP)
+		if (bt_conn_set_security(conn, BT_SECURITY_L4)) {
+			LOG_ERR("Failed to set security level");
+			bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
+		}
+#endif
 	}
 }
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	do_advert();
@@ -123,24 +148,109 @@ static void on_conn_recycled(void)
 {
 	do_advert();
 }
+#endif
+
+#if defined(CONFIG_BT_SMP)
+static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	if (!err) {
+		LOG_DBG("Security changed to %d: for %s", level, addr);
+
+//if (level == BT_SECURITY_L3
+//|| level == BT_SECURITY_L4) {
+    //    k_sem_give(&led_sem);
+//}
+	} else {
+		LOG_ERR("Security failed: %s level %u err %d", addr, level, err);
+	}
+}
+#endif
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	.disconnected = disconnected,
 	.recycled = on_conn_recycled,
+#endif
+#if defined(CONFIG_BT_SMP)
+	.security_changed = security_changed,
+#endif
 };
 
+/* TODO: Move to separate file */
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
+#if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 static void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	k_work_submit(&button_work);
 }
+#endif
+#endif
+
+#if defined(CONFIG_BT_SMP)
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Passkey for %s: %06u", addr, passkey);
+}
+
+static void auth_cancel(struct bt_conn *conn)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Pairing cancelled: %s", addr);
+}
+
+static void pairing_complete(struct bt_conn *conn, bool bonded)
+{
+	LOG_INF("Pairing Complete");
+}
+
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
+{
+	LOG_ERR("Pairing Failed (%d). Disconnecting", reason);
+	bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
+}
+
+static void bond_deleted(uint8_t id, const bt_addr_le_t *peer)
+{
+	LOG_INF("bond Deleted");
+}
+
+static struct bt_conn_auth_cb auth_cb_display = {
+	.passkey_display = auth_passkey_display,
+	.cancel = auth_cancel,
+};
+
+static struct bt_conn_auth_info_cb auth_cb_info = {
+	.pairing_complete = pairing_complete,
+	.pairing_failed = pairing_failed,
+	.bond_deleted = bond_deleted,
+};
+#endif
 
 int bluetooth_init(void)
 {
 	int rc;
+#if defined(CONFIG_BT_FIXED_PASSKEY)
+	uint32_t fixed_passkey = 0;
+#endif
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	k_work_init(&advertise_work, advertise);
+#if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 	k_work_init(&button_work, advertise2);
+#endif
+#endif
 
 	rc = bt_enable(NULL);
 
@@ -149,6 +259,8 @@ int bluetooth_init(void)
 		return rc;
 	}
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
+#if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 	if (!gpio_is_ready_dt(&button)) {
 		LOG_ERR("Button GPIO device not ready: %s", button.port->name);
 		return rc;
@@ -170,9 +282,32 @@ int bluetooth_init(void)
 
 	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
 	gpio_add_callback(button.port, &button_cb_data);
+#endif
+#endif
+
+#if defined(CONFIG_BT_SMP)
+	bt_conn_auth_cb_register(&auth_cb_display);
+	bt_conn_auth_info_cb_register(&auth_cb_info);
+#if defined(CONFIG_BT_FIXED_PASSKEY)
+
+	rc = settings_runtime_get("app/bluetooth_fixed_passkey", (uint8_t *)fixed_passkey, sizeof(fixed_passkey));
+	if (rc == sizeof(fixed_passkey)) {
+		bt_passkey_set(fixed_passkey);
+		LOG_DBG("Fixed passkey set to %06u - THIS IS VERY INSECURE", fixed_passkey);
+	}
+#endif
+#endif
 
 #ifdef CONFIG_APP_BT_ADVERTISE_ON_START
+#if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 	k_work_submit(&button_work);
+#else
+	advertise2(NULL);
+#endif
+#endif
+
+#ifdef CONFIG_APP_BT_MODE_ALWAYS_ADVERTISE
+	advertise(NULL);
 #endif
 
 	return rc;
