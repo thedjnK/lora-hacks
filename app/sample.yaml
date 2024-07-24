@@ -15,31 +15,31 @@ tests:
   lora-hacks.si7021.debug:
     extra_args:
       - FILE_SUFFIX="debug"
-#  lora-hacks.bme680:
+#  lora-hacks.bme680.external:
 #    extra_args:
-#      - EXTRA_CONF_FILE="bme680.conf"
-#      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay"
-#  lora-hacks.bme680.external_dcdc:
+#      - EXTRA_CONF_FILE="external_sensor_power.conf"
+#      - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay"
+#  lora-hacks.bme680.external.external_dcdc:
 #    extra_args:
-#      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
-#      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay"
-  lora-hacks.bme680.external_dcdc.ir_led:
+#      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf"
+#      - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay"
+  lora-hacks.bme680.external.external_dcdc.ir_led:
     extra_args:
-      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
-      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
-  lora-hacks.bme680.external_dcdc.ir_led.debug:
+      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf"
+      - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
+  lora-hacks.bme680.external.external_dcdc.ir_led.debug:
     extra_args:
-      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf"
-      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf"
+      - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
       - FILE_SUFFIX="debug"
-  lora-hacks.bme680.external_dcdc.ir_led.bluetooth:
+  lora-hacks.bme680.external.external_dcdc.ir_led.bluetooth:
     extra_args:
-      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf;bluetooth.conf"
-      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
-  lora-hacks.bme680.external_dcdc.ir_led.bluetooth.thread.analyser:
+      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf;bluetooth.conf"
+      - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
+  lora-hacks.bme680.external.external_dcdc.ir_led.bluetooth.thread.analyser:
     extra_args:
-      - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf;bluetooth.conf;thread_analyser.conf"
-      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf;bluetooth.conf;thread_analyser.conf"
+      - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
   lora-hacks.bme680.bluetooth.garage:
     extra_args:
       - EXTRA_CONF_FILE="bluetooth.conf;garage.conf"
