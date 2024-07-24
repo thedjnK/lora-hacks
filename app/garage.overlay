@@ -1,0 +1,30 @@
+/delete-node/ &button0;
+/delete-node/ &led1;
+/delete-node/ &led2;
+/delete-node/ &led3;
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		garage: led_0 {
+			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+			label = "Transistor input";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+		button0: button_0 {
+			label = "Push button";
+			gpios = <&gpio0 22 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+
+	aliases {
+		/delete-property/ led1;
+		/delete-property/ led2;
+		/delete-property/ led3;
+		garage = &garage;
+	};
+};

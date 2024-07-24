@@ -8,6 +8,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/logging/log.h>
 #include "bluetooth.h"
@@ -47,6 +48,17 @@ static uint8_t device_name[BLUETOOTH_DEVICE_NAME_SIZE] = CONFIG_BT_DEVICE_NAME;
 static struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, device_name, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
+
+#if defined(CONFIG_BT_SMP)
+/* Advertising interval minimum/maximum in 0.625us units, 1.5-2.25 seconds */
+#define BT_ADV_INTERVAL_MIN 2400
+#define BT_ADV_INTERVAL_MAX 3600
+
+static uint8_t bonds;
+static uint8_t gatt_value;
+
+static void bond_loop(const struct bt_bond_info *info, void *user_data);
+#endif
 
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 static void stop_advertising_function(struct k_timer *timer_id)
@@ -91,8 +103,22 @@ static void advertise(struct k_work *work)
 		sd->data_len = strlen(device_name);
 	}
 
-#ifdef CONFIG_APP_BT_MODE_ALWAYS_ADVERTISE
-	rc = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+#if defined(CONFIG_BT_SMP)
+	bonds = 0;
+	bt_le_filter_accept_list_clear();
+	bt_foreach_bond(BT_ID_DEFAULT, bond_loop, NULL);
+
+	if (bonds > 0) {
+		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
+						      BT_LE_ADV_OPT_FILTER_CONN |
+						      BT_LE_ADV_OPT_FILTER_SCAN_REQ),
+				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL),
+				     ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	} else {
+		rc = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE,
+				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
+				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	}
 #else
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 #endif
@@ -160,10 +186,9 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 	if (!err) {
 		LOG_DBG("Security changed to %d: for %s", level, addr);
 
-//if (level == BT_SECURITY_L3
-//|| level == BT_SECURITY_L4) {
-    //    k_sem_give(&led_sem);
-//}
+		if (level == BT_SECURITY_L4) {
+			bluetooth_security_changed();
+		}
 	} else {
 		LOG_ERR("Security failed: %s level %u err %d", addr, level, err);
 	}
@@ -312,3 +337,49 @@ int bluetooth_init(void)
 
 	return rc;
 }
+
+#if defined(CONFIG_BT_SMP)
+void bluetooh_clear_bonds(void)
+{
+	int rc;
+
+	rc = bt_unpair(BT_ID_DEFAULT, NULL);
+	LOG_DBG("Unpair: %d", rc);
+}
+
+static void bond_loop(const struct bt_bond_info *info, void *user_data)
+{
+	struct bt_bond_loop_t *data = (struct bt_bond_loop_t *)user_data;
+	char addr_str[BT_ADDR_LE_STR_LEN];
+
+	bt_le_filter_accept_list_add(&info->addr);
+	bt_addr_le_to_str(&info->addr, addr_str, sizeof(addr_str));
+	LOG_DBG("Added %s to advertising accept filter list\n", addr_str);
+	bonds++;
+}
+
+static ssize_t read_u8(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf,
+		       uint16_t len, uint16_t offset)
+{
+	const uint8_t *value = attr->user_data;
+
+	if (bt_conn_get_security(conn) != BT_SECURITY_L4) {
+		return BT_GATT_ERR(BT_ATT_ERR_AUTHENTICATION);
+	}
+
+	bluetooth_garage_characteristic_written();
+
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, &value, sizeof(value));
+}
+
+BT_GATT_SERVICE_DEFINE(ess_svc,
+	BT_GATT_PRIMARY_SERVICE(BT_UUID_ESS),
+
+	/* Garage door */
+/* TODO: change this */
+	BT_GATT_CHARACTERISTIC(BT_UUID_TEMPERATURE, BT_GATT_CHRC_READ,
+			       (BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_READ_AUTHEN |
+				BT_GATT_PERM_READ_LESC), read_u8,
+			       NULL, &gatt_value),
+);
+#endif

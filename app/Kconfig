@@ -101,6 +101,11 @@ config APP_POWER_DOWN_EXTERNAL_SENSOR
 	  If enabled, will power down the external sensor port when it is not in use, but will lose
 	  the configuration of the sensor if it is configured by the driver at start-up.
 
+config APP_GARAGE_DOOR
+	bool "Garage door"
+	help
+	  If enabled, will allow control of garage door (or simple IO output).
+
 if BT
 
 choice APP_BT_MODE
@@ -208,6 +213,14 @@ module-str = IR LED
 source "subsys/logging/Kconfig.template.log_config"
 
 endif # APP_INFRARED_LED
+
+if APP_GARAGE_DOOR
+
+module = APP_GARAGE
+module-str = Garage
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # APP_GARAGE_DOOR
 
 endmenu
 
