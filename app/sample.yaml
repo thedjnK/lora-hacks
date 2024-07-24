@@ -40,3 +40,7 @@ tests:
     extra_args:
       - EXTRA_CONF_FILE="bme680.conf;external_dcdc.conf;bluetooth.conf;thread_analyser.conf"
       - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+  lora-hacks.bme680.bluetooth.garage:
+    extra_args:
+      - EXTRA_CONF_FILE="bluetooth.conf;garage.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay"
