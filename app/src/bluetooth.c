@@ -29,13 +29,14 @@ static struct gpio_callback button_cb_data;
 static const struct gpio_dt_spec button = BUTTON_DEVICE;
 #endif
 
-static struct k_work advertise_work;
 static void stop_advertising_function(struct k_timer *timer_id);
 static bool continue_advert = false;
-static bool in_connection = false;
 
 K_TIMER_DEFINE(stop_advertising_timer, stop_advertising_function, NULL);
 #endif
+
+static bool in_connection = false;
+static struct k_work advertise_work;
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -57,6 +58,7 @@ static struct bt_data sd[] = {
 
 static uint8_t bonds;
 static uint8_t gatt_value;
+static struct bt_conn *active_conn;
 
 static void bond_loop(const struct bt_bond_info *info, void *user_data);
 #endif
@@ -71,16 +73,20 @@ static void stop_advertising_function(struct k_timer *timer_id)
 		bt_le_adv_stop();
 	}
 }
+#endif
 
 static void do_advert(void)
 {
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	if (continue_advert == true) {
 		k_work_submit(&advertise_work);
 	} else {
 		led_off(LED_BLUE);
 	}
-}
+#else
+	k_work_submit(&advertise_work);
 #endif
+}
 
 static void advertise(struct k_work *work)
 {
@@ -111,12 +117,14 @@ static void advertise(struct k_work *work)
 
 	if (bonds > 0) {
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
+						      BT_LE_ADV_OPT_ONE_TIME |
 						      BT_LE_ADV_OPT_FILTER_CONN |
 						      BT_LE_ADV_OPT_FILTER_SCAN_REQ),
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL),
 				     ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	} else {
-		rc = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE,
+		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
+						      BT_LE_ADV_OPT_ONE_TIME),
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
 				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	}
@@ -158,6 +166,8 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		do_advert();
 #endif
 	} else {
+		in_connection = true;
+		active_conn = conn;
 		LOG_INF("Connected");
 
 #if defined(CONFIG_BT_SMP)
@@ -169,12 +179,14 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 }
 
-#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	in_connection = false;
+	active_conn = NULL;
 	do_advert();
 }
 
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 static void on_conn_recycled(void)
 {
 	do_advert();
@@ -202,8 +214,8 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
-#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	.disconnected = disconnected,
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	.recycled = on_conn_recycled,
 #endif
 #if defined(CONFIG_BT_SMP)
@@ -275,8 +287,8 @@ int bluetooth_init(void)
 	uint32_t fixed_passkey = 0;
 #endif
 
-#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	k_work_init(&advertise_work, advertise);
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 #if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 	k_work_init(&button_work, advertise2);
 #endif
@@ -350,8 +362,18 @@ void bluetooth_clear_bonds(void)
 {
 	int rc;
 
+	/* Stop advertising first, clear bonds */
+	if (in_connection) {
+		bt_conn_disconnect(active_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	} else {
+		bt_le_adv_stop();
+	}
+
 	rc = bt_unpair(BT_ID_DEFAULT, NULL);
 	LOG_DBG("Unpair: %d", rc);
+
+	/* And restart advertising */
+	advertise(NULL);
 }
 
 static void bond_loop(const struct bt_bond_info *info, void *user_data)
