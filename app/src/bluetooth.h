@@ -17,3 +17,6 @@ void bluetooth_security_changed(void);
 
 /* Garage characteristic written callback */
 void bluetooth_garage_characteristic_written(void);
+
+/* Clears all Bluetooth bonds */
+void bluetooh_clear_bonds(void);
