@@ -11,6 +11,7 @@
 #include "lora.h"
 #include "settings.h"
 #include "leds.h"
+#include "watchdog.h"
 
 #define LORA_JOIN_FAIL_LED_BLINK_TIME K_MSEC(750)
 #define LORA_JOIN_FAIL_DELAY K_SECONDS(30)
@@ -190,6 +191,13 @@ int lora_send_message(uint8_t *data, uint16_t length, bool force_confirmed, uint
 			break;
 		}
 	}
+
+#ifdef CONFIG_APP_WATCHDOG
+	if (attempts == 0 && rc < 0) {
+		LOG_ERR("LoRa send failed too much, triggering watchdog");
+		watchdog_fatal();
+	}
+#endif
 
 	return rc;
 }

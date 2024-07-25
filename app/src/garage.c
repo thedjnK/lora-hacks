@@ -8,6 +8,9 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include "garage.h"
+#include "bluetooth.h"
+#include "watchdog.h"
 
 LOG_MODULE_REGISTER(garage, CONFIG_APP_GARAGE_LOG_LEVEL);
 
@@ -89,7 +92,9 @@ static void door_function(void *, void *, void *)
 	}
 
 failure:
-//	door_failure = true;
+#if CONFIG_APP_WATCHDOG
+	watchdog_fatal();
+#endif
 }
 
 int garage_init(void)

@@ -17,6 +17,7 @@
 #include "bluetooth.h"
 #include "garage.h"
 #include "hfclk.h"
+#include "watchdog.h"
 #include "app_version.h"
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
@@ -188,6 +189,10 @@ first_start:
 		}
 
 		(void)hfclk_disable();
+
+#ifdef CONFIG_APP_WATCHDOG
+		watchdog_feed();
+#endif
 
 		k_sleep(SENSOR_READING_TIME);
 	}

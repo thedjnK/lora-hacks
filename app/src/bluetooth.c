@@ -14,6 +14,7 @@
 #include "bluetooth.h"
 #include "settings.h"
 #include "leds.h"
+#include "watchdog.h"
 
 LOG_MODULE_REGISTER(bluetooth, CONFIG_APP_BLUETOOTH_LOG_LEVEL);
 
@@ -125,6 +126,10 @@ static void advertise(struct k_work *work)
 
 	if (rc) {
 		LOG_ERR("Advert start failed: %d", rc);
+
+#ifdef CONFIG_APP_WATCHDOG
+		watchdog_fatal();
+#endif
 	}
 }
 
@@ -315,11 +320,13 @@ int bluetooth_init(void)
 	bt_conn_auth_info_cb_register(&auth_cb_info);
 #if defined(CONFIG_BT_FIXED_PASSKEY)
 
-	rc = settings_runtime_get("app/bluetooth_fixed_passkey", (uint8_t *)fixed_passkey, sizeof(fixed_passkey));
+	rc = settings_runtime_get("app/bluetooth_fixed_passkey", (uint8_t *)&fixed_passkey, sizeof(fixed_passkey));
 	if (rc == sizeof(fixed_passkey)) {
 		bt_passkey_set(fixed_passkey);
 		LOG_DBG("Fixed passkey set to %06u - THIS IS VERY INSECURE", fixed_passkey);
 	}
+
+	rc = 0;
 #endif
 #endif
 
@@ -349,12 +356,11 @@ void bluetooh_clear_bonds(void)
 
 static void bond_loop(const struct bt_bond_info *info, void *user_data)
 {
-	struct bt_bond_loop_t *data = (struct bt_bond_loop_t *)user_data;
 	char addr_str[BT_ADDR_LE_STR_LEN];
 
 	bt_le_filter_accept_list_add(&info->addr);
 	bt_addr_le_to_str(&info->addr, addr_str, sizeof(addr_str));
-	LOG_DBG("Added %s to advertising accept filter list\n", addr_str);
+	LOG_DBG("Added %s to advertising accept filter list", addr_str);
 	bonds++;
 }
 
