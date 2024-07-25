@@ -15,6 +15,7 @@
 #include "ir_led.h"
 #include "peripherals.h"
 #include "bluetooth.h"
+#include "garage.h"
 #include "hfclk.h"
 #include "app_version.h"
 
@@ -56,6 +57,10 @@ int main(void)
 	(void)leds_init();
 	lora_keys_load();
 	app_keys_load();
+
+#ifdef CONFIG_APP_GARAGE_DOOR
+	garage_init();
+#endif
 
 #ifdef CONFIG_BT
 	rc = bluetooth_init();
