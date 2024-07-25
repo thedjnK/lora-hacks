@@ -19,4 +19,4 @@ void bluetooth_security_changed(void);
 void bluetooth_garage_characteristic_written(void);
 
 /* Clears all Bluetooth bonds */
-void bluetooh_clear_bonds(void);
+void bluetooth_clear_bonds(void);

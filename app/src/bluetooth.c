@@ -346,7 +346,7 @@ int bluetooth_init(void)
 }
 
 #if defined(CONFIG_BT_SMP)
-void bluetooh_clear_bonds(void)
+void bluetooth_clear_bonds(void)
 {
 	int rc;
 

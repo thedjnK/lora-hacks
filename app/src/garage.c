@@ -59,7 +59,7 @@ static void button_pressed_handler(struct k_work *work)
 		}
 	}
 
-	bluetooh_clear_bonds();
+	bluetooth_clear_bonds();
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
