@@ -53,14 +53,20 @@ static struct bt_data sd[] = {
 
 #if defined(CONFIG_BT_SMP)
 /* Advertising interval minimum/maximum in 0.625us units, 1.5-2.25 seconds */
-#define BT_ADV_INTERVAL_MIN 2400
-#define BT_ADV_INTERVAL_MAX 3600
+#define BT_ADV_INTERVAL_MIN 2200
+#define BT_ADV_INTERVAL_MAX 3400
 
 static uint8_t bonds;
 static uint8_t gatt_value;
 static struct bt_conn *active_conn;
 
 static void bond_loop(const struct bt_bond_info *info, void *user_data);
+static void bond_check_loop(const struct bt_bond_info *info, void *user_data);
+
+struct bond_check_data_t {
+	const bt_addr_le_t *addr;
+	bool found;
+};
 #endif
 
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
@@ -115,6 +121,8 @@ static void advertise(struct k_work *work)
 	bt_le_filter_accept_list_clear();
 	bt_foreach_bond(BT_ID_DEFAULT, bond_loop, NULL);
 
+#if 0
+	/* Does not work on nRF51 */
 	if (bonds > 0) {
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
 						      BT_LE_ADV_OPT_ONE_TIME |
@@ -123,11 +131,13 @@ static void advertise(struct k_work *work)
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL),
 				     ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	} else {
-		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
-						      BT_LE_ADV_OPT_ONE_TIME),
-				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
-				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-	}
+#endif
+
+	rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
+					      BT_LE_ADV_OPT_ONE_TIME),
+			     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
+			     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+
 #else
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 #endif
@@ -162,13 +172,22 @@ static void connected(struct bt_conn *conn, uint8_t err)
 {
 	if (err) {
 		LOG_ERR("Connection failed (err 0x%02x)", err);
-#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 		do_advert();
-#endif
 	} else {
 		in_connection = true;
 		active_conn = conn;
 		LOG_INF("Connected");
+
+		if (bonds > 0) {
+			/* Check if this is a bonded device or not, if not, disconnect */
+			struct bond_check_data_t bond_check_data = {
+				.addr = bt_conn_get_dst(conn),
+				.found = false,
+			};
+
+			bt_foreach_bond(BT_ID_DEFAULT, bond_check_loop, &bond_check_data);
+		}
+
 
 #if defined(CONFIG_BT_SMP)
 		if (bt_conn_set_security(conn, BT_SECURITY_L4)) {
@@ -252,6 +271,24 @@ static void auth_cancel(struct bt_conn *conn)
 	LOG_INF("Pairing cancelled: %s", addr);
 }
 
+static enum bt_security_err auth_pairing_accept(struct bt_conn *conn, const struct bt_conn_pairing_feat *const feat)
+{
+	if (bonds > 0) {
+		return BT_SECURITY_ERR_PAIR_NOT_ALLOWED;
+	}
+
+	return BT_SECURITY_ERR_SUCCESS;
+}
+
+static void auth_pairing_confirm(struct bt_conn *conn)
+{
+	if (bonds > 0) {
+		bt_conn_auth_cancel(conn);
+	}
+
+	bt_conn_auth_pairing_confirm(conn);
+}
+
 static void pairing_complete(struct bt_conn *conn, bool bonded)
 {
 	LOG_INF("Pairing Complete");
@@ -271,6 +308,8 @@ static void bond_deleted(uint8_t id, const bt_addr_le_t *peer)
 static struct bt_conn_auth_cb auth_cb_display = {
 	.passkey_display = auth_passkey_display,
 	.cancel = auth_cancel,
+	.pairing_accept = auth_pairing_accept,
+	.pairing_confirm = auth_pairing_confirm,
 };
 
 static struct bt_conn_auth_info_cb auth_cb_info = {
@@ -299,6 +338,10 @@ int bluetooth_init(void)
 	if (rc != 0) {
 		LOG_ERR("Bluetooth enable failed: %d", rc);
 		return rc;
+	}
+
+	if (IS_ENABLED(CONFIG_SETTINGS)) {
+		settings_load();
 	}
 
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
@@ -384,6 +427,15 @@ static void bond_loop(const struct bt_bond_info *info, void *user_data)
 	bt_addr_le_to_str(&info->addr, addr_str, sizeof(addr_str));
 	LOG_DBG("Added %s to advertising accept filter list", addr_str);
 	bonds++;
+}
+
+static void bond_check_loop(const struct bt_bond_info *info, void *user_data)
+{
+	struct bond_check_data_t *bond_check_data = (struct bond_check_data_t *)user_data;
+
+	if (memcmp(bond_check_data->addr, &info->addr, sizeof(bt_addr_le_t)) == 0) {
+		bond_check_data->found = true;
+	}
 }
 
 static ssize_t read_u8(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf,
