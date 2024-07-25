@@ -106,6 +106,13 @@ config APP_GARAGE_DOOR
 	help
 	  If enabled, will allow control of garage door (or simple IO output).
 
+config APP_WATCHDOG
+	bool "Watchdog"
+	select WATCHDOG
+	help
+	  If enabled, will setup and feed watchdog which will reboot device if the device stops
+	  responding.
+
 if BT
 
 choice APP_BT_MODE
@@ -221,6 +228,14 @@ module-str = Garage
 source "subsys/logging/Kconfig.template.log_config"
 
 endif # APP_GARAGE_DOOR
+
+if APP_WATCHDOG
+
+module = APP_WATCHDOG
+module-str = Watchdog
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # APP_WATCHDOG
 
 endmenu
 
