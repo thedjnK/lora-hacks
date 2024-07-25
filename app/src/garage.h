@@ -8,3 +8,6 @@
 
 /* Initialise garage */
 int garage_init(void);
+
+/* Open or close garage door */
+void garage_door_open_close(void);

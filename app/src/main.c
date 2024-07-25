@@ -37,6 +37,7 @@ enum lora_uplink_types {
 enum lora_downlink_types {
 	LORA_DOWNLINK_TYPE_IR,
 	LORA_DOWNLINK_TYPE_SETTING,
+	LORA_DOWNLINK_TYPE_GARAGE,
 };
 
 int main(void)
@@ -225,6 +226,14 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 				setting_lora(data[1], &data[2], (len - 2));
 				break;
 			}
+
+#ifdef CONFIG_APP_GARAGE_DOOR
+			case LORA_DOWNLINK_TYPE_GARAGE:
+			{
+				garage_door_open_close();
+				break;
+			}
+#endif
 
 			default:
 			{

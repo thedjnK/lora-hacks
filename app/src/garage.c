@@ -69,21 +69,21 @@ static void button_pressed(const struct device *dev, struct gpio_callback *cb, u
 
 static void door_function(void *, void *, void *)
 {
-	int err;
+	int rc;
 
 	while (1) {
 		if (k_sem_take(&door_sem, K_FOREVER) == 0) {
-			err = gpio_pin_configure_dt(&door, GPIO_OUTPUT_ACTIVE);
+			rc = gpio_pin_configure_dt(&door, GPIO_OUTPUT_ACTIVE);
 
-			if (err != 0) {
+			if (rc != 0) {
 				goto failure;
 			}
 
 			k_sleep(K_MSEC(DOOR_ACTIVE_TIME_MS));
 
-			err = gpio_pin_configure_dt(&door, GPIO_OUTPUT_INACTIVE);
+			rc = gpio_pin_configure_dt(&door, GPIO_OUTPUT_INACTIVE);
 
-			if (err != 0) {
+			if (rc != 0) {
 				goto failure;
 			}
 
@@ -149,6 +149,11 @@ void bluetooth_security_changed(void)
 }
 
 void bluetooth_garage_characteristic_written(void)
+{
+	k_sem_give(&door_sem);
+}
+
+void garage_door_open_close(void)
 {
 	k_sem_give(&door_sem);
 }
