@@ -34,7 +34,7 @@ static const struct gpio_dt_spec door = DOOR_DEVICE;
 K_THREAD_STACK_DEFINE(door_thread_stack, DOOR_THREAD_STACK_SIZE);
 static k_tid_t door_thread_id;
 static struct k_thread door_thread;
-static struct k_sem door_sem;
+K_SEM_DEFINE(door_sem, 0, 1);
 
 static void button_pressed_handler(struct k_work *work)
 {
