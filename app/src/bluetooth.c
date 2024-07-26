@@ -175,8 +175,10 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		do_advert();
 	} else {
 		in_connection = true;
-		active_conn = conn;
 		LOG_INF("Connected");
+
+#if defined(CONFIG_BT_SMP)
+		active_conn = conn;
 
 		if (bonds > 0) {
 			/* Check if this is a bonded device or not, if not, disconnect */
@@ -189,7 +191,6 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		}
 
 
-#if defined(CONFIG_BT_SMP)
 		if (bt_conn_set_security(conn, BT_SECURITY_L4)) {
 			LOG_ERR("Failed to set security level");
 			bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
@@ -201,7 +202,11 @@ static void connected(struct bt_conn *conn, uint8_t err)
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	in_connection = false;
+
+#if defined(CONFIG_BT_SMP)
 	active_conn = NULL;
+#endif
+
 	do_advert();
 }
 
