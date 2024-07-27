@@ -8,10 +8,10 @@ common:
 tests:
   lora-hacks.si7021:
     tags: default
-  lora-hacks.si7021.bluetooth:
-      - EXTRA_CONF_FILE="bluetooth.conf"
-  lora-hacks.si7021.bluetooth.thread.analyser:
-      - EXTRA_CONF_FILE="bluetooth.conf;thread_analyser.conf"
+  lora-hacks.si7021.bluetooth.mcumgr:
+      - EXTRA_CONF_FILE="bluetooth.conf;mcumgr.conf"
+  lora-hacks.si7021.bluetooth.mcumgr.thread.analyser:
+      - EXTRA_CONF_FILE="bluetooth.conf;mcumgr.conf;thread_analyser.conf"
   lora-hacks.si7021.debug:
     extra_args:
       - FILE_SUFFIX="debug"
@@ -32,15 +32,22 @@ tests:
       - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf"
       - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
       - FILE_SUFFIX="debug"
-  lora-hacks.bme680.external.external_dcdc.ir_led.bluetooth:
+  lora-hacks.bme680.external.external_dcdc.ir_led.bluetooth.mcumgr:
     extra_args:
-      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf;bluetooth.conf"
+      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf;bluetooth.conf;mcumgr.conf"
       - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
-  lora-hacks.bme680.external.external_dcdc.ir_led.bluetooth.thread.analyser:
+  lora-hacks.bme680.external.external_dcdc.ir_led.bluetooth.mcumgr.thread.analyser:
     extra_args:
-      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf;bluetooth.conf;thread_analyser.conf"
+      - EXTRA_CONF_FILE="external_sensor_power.conf;external_dcdc.conf;bluetooth.conf;mcumgr.conf;thread_analyser.conf"
       - EXTRA_DTC_OVERLAY_FILE="external_sensor_power.overlay;bme680.overlay;ir_led.overlay"
-  lora-hacks.bme680.bluetooth.garage:
+  lora-hacks.bme680.bluetooth.garage.mcumgr:
     extra_args:
-      - EXTRA_CONF_FILE="bluetooth.conf;garage.conf"
+      - EXTRA_CONF_FILE="bluetooth.conf;garage.conf;mcumgr.conf"
       - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;garage.overlay"
+  lora-hacks.bme680.bluetooth.garage.fota:
+    extra_args:
+      - EXTRA_CONF_FILE="bluetooth.conf;garage.conf;mcumgr.conf;fota.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;garage.overlay"
+      - FILE_SUFFIX=fota
+      - mcuboot_EXTRA_CONF_FILE="\${APPLICATION_CONFIG_DIR}/garage.conf"
+      - mcuboot_EXTRA_DTC_OVERLAY_FILE="\${APPLICATION_CONFIG_DIR}/garage.overlay"
