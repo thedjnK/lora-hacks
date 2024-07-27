@@ -28,3 +28,11 @@
 		garage = &garage;
 	};
 };
+
+&gpio0 {
+	door {
+		gpio-hog;
+		gpios = <24 GPIO_ACTIVE_HIGH>;
+		output-low;
+	};
+};
