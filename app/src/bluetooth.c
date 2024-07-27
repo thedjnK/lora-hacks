@@ -118,10 +118,11 @@ static void advertise(struct k_work *work)
 
 #if defined(CONFIG_BT_SMP)
 	bonds = 0;
-	bt_le_filter_accept_list_clear();
+//	bt_le_filter_accept_list_clear();
 	bt_foreach_bond(BT_ID_DEFAULT, bond_loop, NULL);
 
-	if (bonds > 0) {
+#if 0
+	if (bonds == CONFIG_BT_MAX_PAIRED) {
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
 						      BT_LE_ADV_OPT_ONE_TIME |
 						      BT_LE_ADV_OPT_FILTER_CONN |
@@ -129,11 +130,12 @@ static void advertise(struct k_work *work)
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL),
 				     ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	} else {
+#endif
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
 						      BT_LE_ADV_OPT_ONE_TIME),
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
 				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-	}
+//	}
 #else
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 #endif
@@ -176,7 +178,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 #if defined(CONFIG_BT_SMP)
 		active_conn = conn;
 
-		if (bonds > 0) {
+		if (bonds == CONFIG_BT_MAX_PAIRED) {
 			/* Check if this is a bonded device or not, if not, disconnect */
 			struct bond_check_data_t bond_check_data = {
 				.addr = bt_conn_get_dst(conn),
@@ -274,7 +276,7 @@ static void auth_cancel(struct bt_conn *conn)
 
 static enum bt_security_err auth_pairing_accept(struct bt_conn *conn, const struct bt_conn_pairing_feat *const feat)
 {
-	if (bonds > 0) {
+	if (bonds == CONFIG_BT_MAX_PAIRED) {
 		return BT_SECURITY_ERR_PAIR_NOT_ALLOWED;
 	}
 
@@ -283,7 +285,7 @@ static enum bt_security_err auth_pairing_accept(struct bt_conn *conn, const stru
 
 static void auth_pairing_confirm(struct bt_conn *conn)
 {
-	if (bonds > 0) {
+	if (bonds > CONFIG_BT_MAX_PAIRED) {
 		bt_conn_auth_cancel(conn);
 	}
 
@@ -424,7 +426,7 @@ static void bond_loop(const struct bt_bond_info *info, void *user_data)
 {
 	char addr_str[BT_ADDR_LE_STR_LEN];
 
-	bt_le_filter_accept_list_add(&info->addr);
+//	bt_le_filter_accept_list_add(&info->addr);
 	bt_addr_le_to_str(&info->addr, addr_str, sizeof(addr_str));
 	LOG_DBG("Added %s to advertising accept filter list", addr_str);
 	bonds++;
