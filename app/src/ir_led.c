@@ -7,10 +7,13 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/counter.h>
 #include "ir_led.h"
 #include "hfclk.h"
 
 LOG_MODULE_REGISTER(ir_led, CONFIG_APP_IR_LED_LOG_LEVEL);
+
+#define SECOND_UNIT
 
 #define ASM_SLEEP_1X() \
 	__asm("NOP")
@@ -58,6 +61,9 @@ static void trigger_signal()
 		ASM_SLEEP_1X();
 		ASM_SLEEP_1X();
 		ASM_SLEEP_1X();
+#ifdef SECOND_UNIT
+		ASM_SLEEP_1X();
+#endif
 
 		rc = gpio_pin_set_dt(&led, 0);
 
@@ -75,6 +81,9 @@ static void trigger_signal()
 
 		/* Extended when testing wit HFCLK */
 		ASM_SLEEP_16X();
+#ifdef SECOND_UNIT
+		ASM_SLEEP_4X();
+#endif
 
 		--loops;
 	}
@@ -144,6 +153,7 @@ int ir_led_send(enum AC_CMD command)
 	uint8_t *data;
 	uint8_t q = 0;
 	uint8_t t;
+	int lock;
 
 	switch (command) {
 		case AC_CMD_ON_AC_HIGH_18C_FAN_MOVE:
@@ -181,6 +191,8 @@ int ir_led_send(enum AC_CMD command)
 
 /* TODO: Check response */
 
+	lock = irq_lock();
+
 	/* Send start signal header */
 	trigger_signal();
 	trigger_signal();
@@ -191,10 +203,14 @@ int ir_led_send(enum AC_CMD command)
 	trigger_signal();
 	trigger_signal();
 
-	/* Wait for header space signal */
+	/* Wait for header space signal, 1.612ms */
 //	k_busy_wait(1608);
+#ifndef SECOND_UNIT
 	k_busy_wait(1604);
-	__asm("NOP");
+	ASM_SLEEP_1X();
+#else
+	k_busy_wait(1594);
+#endif
 
 	while (q < command_size)
 	{
@@ -217,8 +233,12 @@ int ir_led_send(enum AC_CMD command)
 			else
 			{
 				/* 1.214ms wait */
+#ifndef SECOND_UNIT
 				k_busy_wait(1201);
 				ASM_SLEEP_1X();
+#else
+				k_busy_wait(1196);
+#endif
 			}
 
 			check = check << 1;
@@ -232,6 +252,7 @@ int ir_led_send(enum AC_CMD command)
 	trigger_signal();
 
 	rc = gpio_pin_set_dt(&led, 0);
+	irq_unlock(lock);
 
 	rc = hfclk_disable();
 /* TODO: Check response */
