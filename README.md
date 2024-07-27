@@ -11,7 +11,7 @@ This is an unofficial firmware for the RS1xx sensor. It supports:
 * (Custom) external garage door (or any I/O) control
 * LoRa MCUmgr protocol 
 * Remotely (LoRa) or locally (Bluetooth) changing of device settings (LoRa keys, external battery measurement offset, device name) 
-* No bootloader or firmware update support (device **can** support it and has plenty of flash but given the RAM limitations it was considered a waste of time) 
+* (Optional) MCUboot bootloader and firmware update support (over Bluetooth, or LoRa if you're feeling *risky*)
 
 Programming of this firmware involves the use of a hammer which will void your device's warranty.
 
