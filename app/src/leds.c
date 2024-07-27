@@ -28,7 +28,7 @@ int leds_init(void)
 {
 	int rc = 0;
 
-#if DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
+#if defined(CONFIG_APP_LEDS) && DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
 	if (!gpio_is_ready_dt(&led_red)) {
 		LOG_ERR("Red LED not ready");
 		return -EIO;
@@ -67,7 +67,7 @@ int leds_init(void)
 
 static const struct gpio_dt_spec *enum_to_led(enum led_t led)
 {
-#if DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
+#if defined(CONFIG_APP_LEDS) && DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
 	switch (led)
 	{
 		case LED_RED:
@@ -86,7 +86,7 @@ static const struct gpio_dt_spec *enum_to_led(enum led_t led)
 
 void led_on(enum led_t led)
 {
-#if DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
+#if defined(CONFIG_APP_LEDS) && DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
 	int rc;
 	const struct gpio_dt_spec *led_device = enum_to_led(led);
 
@@ -105,7 +105,7 @@ void led_on(enum led_t led)
 
 void led_off(enum led_t led)
 {
-#if DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
+#if defined(CONFIG_APP_LEDS) && DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
 	int rc;
 	const struct gpio_dt_spec *led_device = enum_to_led(led);
 
@@ -124,7 +124,7 @@ void led_off(enum led_t led)
 
 void led_blink(enum led_t led, k_timeout_t delay)
 {
-#if DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
+#if defined(CONFIG_APP_LEDS) && DT_NODE_HAS_STATUS(LED_RED_ALIAS, okay)
 	int rc;
 	const struct gpio_dt_spec *led_device = enum_to_led(led);
 

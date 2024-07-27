@@ -113,6 +113,12 @@ config APP_WATCHDOG
 	  If enabled, will setup and feed watchdog which will reboot device if the device stops
 	  responding.
 
+config APP_LEDS
+	bool "LEDs"
+	default y
+	help
+	  If enabled, will setup and enable usage of the LEDs.
+
 if BT
 
 choice APP_BT_MODE
