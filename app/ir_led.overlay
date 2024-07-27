@@ -1,9 +1,11 @@
+#include <zephyr/dt-bindings/gpio/nordic-nrf-gpio.h>
+
 / {
 	leds {
 		compatible = "gpio-leds";
 
 		ir_led: ir_led {
-			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio0 24 (GPIO_ACTIVE_HIGH | NRF_GPIO_DRIVE_H0H1)>;
 			label = "Infrared LED";
 		};
 	};
