@@ -187,6 +187,10 @@ int ir_led_send(enum AC_CMD command)
 		}
 	};
 
+	/* Switch to constant latency */
+	NRF_POWER->TASKS_LOWPWR = 0;
+	NRF_POWER->TASKS_CONSTLAT = 1;
+
 	rc = hfclk_enable();
 
 /* TODO: Check response */
@@ -256,6 +260,10 @@ int ir_led_send(enum AC_CMD command)
 
 	rc = hfclk_disable();
 /* TODO: Check response */
+
+	/* Switch back to low power */
+	NRF_POWER->TASKS_CONSTLAT = 0;
+	NRF_POWER->TASKS_LOWPWR = 1;
 
 	return rc;
 }
