@@ -121,8 +121,6 @@ static void advertise(struct k_work *work)
 	bt_le_filter_accept_list_clear();
 	bt_foreach_bond(BT_ID_DEFAULT, bond_loop, NULL);
 
-#if 0
-	/* Does not work on nRF51 */
 	if (bonds > 0) {
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
 						      BT_LE_ADV_OPT_ONE_TIME |
@@ -131,13 +129,11 @@ static void advertise(struct k_work *work)
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL),
 				     ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	} else {
-#endif
-
-	rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
-					      BT_LE_ADV_OPT_ONE_TIME),
-			     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
-			     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-
+		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
+						      BT_LE_ADV_OPT_ONE_TIME),
+				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
+				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	}
 #else
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 #endif
