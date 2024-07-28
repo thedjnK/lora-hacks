@@ -118,10 +118,9 @@ static void advertise(struct k_work *work)
 
 #if defined(CONFIG_BT_SMP)
 	bonds = 0;
-//	bt_le_filter_accept_list_clear();
+	bt_le_filter_accept_list_clear();
 	bt_foreach_bond(BT_ID_DEFAULT, bond_loop, NULL);
 
-#if 0
 	if (bonds == CONFIG_BT_MAX_PAIRED) {
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
 						      BT_LE_ADV_OPT_ONE_TIME |
@@ -130,12 +129,11 @@ static void advertise(struct k_work *work)
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL),
 				     ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	} else {
-#endif
 		rc = bt_le_adv_start(BT_LE_ADV_PARAM((BT_LE_ADV_OPT_CONNECTABLE |
 						      BT_LE_ADV_OPT_ONE_TIME),
 				     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
 				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
-//	}
+	}
 #else
 	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 #endif
@@ -426,7 +424,7 @@ static void bond_loop(const struct bt_bond_info *info, void *user_data)
 {
 	char addr_str[BT_ADDR_LE_STR_LEN];
 
-//	bt_le_filter_accept_list_add(&info->addr);
+	bt_le_filter_accept_list_add(&info->addr);
 	bt_addr_le_to_str(&info->addr, addr_str, sizeof(addr_str));
 	LOG_DBG("Added %s to advertising accept filter list", addr_str);
 	bonds++;
