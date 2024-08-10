@@ -9,3 +9,6 @@ int hfclk_enable();
 
 /* Disable HFCLK without waiting for it to stop */
 int hfclk_disable();
+
+/* Set HFCLK up */
+int hfclk_setup();

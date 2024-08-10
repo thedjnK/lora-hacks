@@ -56,6 +56,7 @@ int main(void)
 	LOG_INF("Application version %s, built " __DATE__, APP_VERSION_EXTENDED_STRING);
 
 	peripheral_setup();
+	hfclk_setup();
 	(void)leds_init();
 	lora_keys_load();
 	app_keys_load();

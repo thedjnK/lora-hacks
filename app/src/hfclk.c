@@ -16,7 +16,8 @@ LOG_MODULE_REGISTER(hfclk, CONFIG_APP_HFCLK_LOG_LEVEL);
 
 static K_SEM_DEFINE(hfclk_ready_sem, 0, 1);
 static struct onoff_client hfclk_client;
-static bool hfclk_enabled = false;
+static uint8_t hfclk_count = 0;
+static struct onoff_manager *hfclk_manager;
 
 static void clock_ready(struct onoff_manager *manager, struct onoff_client *client, uint32_t state,
 			int rc)
@@ -27,9 +28,6 @@ static void clock_ready(struct onoff_manager *manager, struct onoff_client *clie
 int hfclk_enable()
 {
 	int rc;
-	struct onoff_manager *hfclk_manager = z_nrf_clock_control_get_onoff(CLOCK_CONTROL_NRF_SUBSYS_HF);
-
-	sys_notify_init_callback(&hfclk_client.notify, clock_ready);
 
 	rc = onoff_request(hfclk_manager, &hfclk_client);
 
@@ -43,7 +41,7 @@ int hfclk_enable()
 	if (rc != 0) {
 		LOG_ERR("HFCLK start wait timeout: %d", rc);
 	} else {
-		hfclk_enabled = true;
+		++hfclk_count;
 	}
 
 finish:
@@ -53,9 +51,8 @@ finish:
 int hfclk_disable()
 {
 	int rc;
-	struct onoff_manager *hfclk_manager = z_nrf_clock_control_get_onoff(CLOCK_CONTROL_NRF_SUBSYS_HF);
 
-	if (hfclk_enabled == false) {
+	if (hfclk_count == 0) {
 		LOG_ERR("Tried to disable HFCLK when HFCLK is not running");
 		return -EINVAL;
 	}
@@ -65,8 +62,16 @@ int hfclk_disable()
 	if (rc < 0) {
 		LOG_ERR("HFCLK disable failed: %d", rc);
 	} else {
-		hfclk_enabled = false;
+		--hfclk_count;
 	}
 
 	return rc;
+}
+
+int hfclk_setup()
+{
+	hfclk_manager = z_nrf_clock_control_get_onoff(CLOCK_CONTROL_NRF_SUBSYS_HF);
+	sys_notify_init_callback(&hfclk_client.notify, clock_ready);
+
+	return 0;
 }
