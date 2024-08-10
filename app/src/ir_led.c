@@ -265,6 +265,8 @@ int ir_led_send(enum AC_CMD command)
 	NRF_POWER->TASKS_CONSTLAT = 0;
 	NRF_POWER->TASKS_LOWPWR = 1;
 
+	rc = gpio_pin_configure_dt(&led, GPIO_OUTPUT_INACTIVE);
+
 	return rc;
 }
 
