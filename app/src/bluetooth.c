@@ -37,6 +37,7 @@ K_TIMER_DEFINE(stop_advertising_timer, stop_advertising_function, NULL);
 
 static bool in_connection = false;
 static struct k_work advertise_work;
+static struct k_work stop_advertising_work;
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -52,7 +53,7 @@ static struct bt_data sd[] = {
 };
 
 #if defined(CONFIG_BT_SMP)
-/* Advertising interval minimum/maximum in 0.625us units, 1.5-2.25 seconds */
+/* Advertising interval minimum/maximum in 0.625us units, 1.375-2.125 seconds */
 #define BT_ADV_INTERVAL_MIN 2200
 #define BT_ADV_INTERVAL_MAX 3400
 
@@ -67,16 +68,25 @@ struct bond_check_data_t {
 	const bt_addr_le_t *addr;
 	bool found;
 };
+#else
+/* Advertising interval minimum/maximum in 0.625us units, 0.2-0.4 seconds */
+#define BT_ADV_INTERVAL_MIN 320
+#define BT_ADV_INTERVAL_MAX 640
 #endif
 
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
+static void stop_advertising(struct k_work *work)
+{
+	led_off(LED_BLUE);
+	bt_le_adv_stop();
+}
+
 static void stop_advertising_function(struct k_timer *timer_id)
 {
 	continue_advert = false;
 
 	if (in_connection == false) {
-		led_off(LED_BLUE);
-		bt_le_adv_stop();
+		k_work_submit(&stop_advertising_work);
 	}
 }
 #endif
@@ -135,7 +145,9 @@ static void advertise(struct k_work *work)
 				     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	}
 #else
-	rc = bt_le_adv_start(BT_LE_ADV_CONN_ONE_TIME, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	rc = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
+					     BT_ADV_INTERVAL_MIN, BT_ADV_INTERVAL_MAX, NULL), ad,
+			     ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 #endif
 
 	if (rc) {
@@ -329,6 +341,7 @@ int bluetooth_init(void)
 
 	k_work_init(&advertise_work, advertise);
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
+	k_work_init(&stop_advertising_work, stop_advertising);
 #if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 	k_work_init(&button_work, advertise2);
 #endif
