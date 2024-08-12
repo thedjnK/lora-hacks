@@ -33,6 +33,31 @@ config MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS
 	  Will use confirmed uplink packets for responses if enabled, otherwise will use
 	  unconfirmed packets.
 
+config MCUMGR_TRANSPORT_LORA_REASSEMBLY
+	bool "Reassemble LoRa SMP messages"
+	select MCUMGR_TRANSPORT_REASSEMBLY
+	default y
+	help
+	  Will reassemble downlink LoRa messages together to allow for messages larger than a
+	  single message to be recieved, otherwise will support messages up to a single packet in
+	  size.
+
+config MCUMGR_TRANSPORT_LORA_POLL_FOR_DATA
+	bool "Send empty packet if partial packet received"
+	depends on CONFIG_MCUMGR_TRANSPORT_LORA_REASSEMBLY
+	default y
+	help
+	  Will send an empty packet if a partial (fragmented) message has been recieved from the
+	  server, this will allow the next packet to be recieved without waiting for next
+	  transmission window.
+
+config MCUMGR_TRANSPORT_LORA_FRAGMENTED_UPLINKS
+	bool "Fragment uplink messages"
+	default y
+	help
+	  Will fragment messages into multiple uplink messages if they are too big to fit into a
+	  single uplink message. If disabled then uplinks that are too large will not be sent.
+
 module = MCUMGR_TRANSPORT_LORA
 module-str = LoRa MCUmgr SMP transport
 source "subsys/logging/Kconfig.template.log_config"

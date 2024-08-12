@@ -12,6 +12,7 @@
 #include <zephyr/mgmt/mcumgr/mgmt/handlers.h>
 
 #include <mgmt/mcumgr/transport/smp_internal.h>
+#include <mgmt/mcumgr/transport/smp_reassembly.h>
 
 #define SMP_LORA_TRANSPORT SMP_USER_DEFINED_TRANSPORT
 
@@ -48,18 +49,56 @@ static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int
 	ARG_UNUSED(rssi);
 	ARG_UNUSED(snr);
 
-	if (len > sizeof(struct smp_hdr) && port == CONFIG_MCUMGR_TRANSPORT_LORA_PORT) {
-		struct net_buf *nb;
+	if (port == CONFIG_MCUMGR_TRANSPORT_LORA_PORT) {
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORA_REASSEMBLY
+		int rc;
 
-		nb = smp_packet_alloc();
+		if (len == 0) {
+			/* Empty packet is used to clear partially queued data */
+			(void)smp_reassembly_drop(&smp_lora_transport);
+		} else {
+			rc = smp_reassembly_collect(&smp_lora_transport, hex_data, len);
 
-		if (!nb) {
-			LOG_ERR("LoRa SMP packet allocation failure");
-			return;
+			if (rc == 0) {
+				rc = smp_reassembly_complete(&smp_lora_transport, false);
+
+				if (rc) {
+					LOG_ERR("LoRa SMP reassembly complete failed: %d", rc);
+				}
+			} else if (rc < 0) {
+				LOG_ERR("LoRa SMP reassembly collect failed: %d", rc);
+			} else {
+				LOG_DBG("LoRa SMP expected data left: %d", rc);
+
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORA_POLL_FOR_DATA
+				/* Send empty LoRa packet to receive next packet from server */
+				rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, NULL, 0,
+					  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ?
+					   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
+
+				if (rc) {
+					LOG_ERR("LoRa SMP send empty message failed: %d", rc);
+				}
+#endif
+			}
 		}
+#else
+		if (len > sizeof(struct smp_hdr)) {
+			struct net_buf *nb;
 
-		net_buf_add_mem(nb, hex_data, len);
-		smp_rx_req(&smp_lora_transport, nb);
+			nb = smp_packet_alloc();
+
+			if (!nb) {
+				LOG_ERR("LoRa SMP packet allocation failure");
+				return;
+			}
+
+			net_buf_add_mem(nb, hex_data, len);
+			smp_rx_req(&smp_lora_transport, nb);
+		} else {
+			LOG_ERR("Invalid LoRa SMP downlink");
+		}
+#endif
 	} else {
 		LOG_ERR("Invalid LoRa SMP downlink");
 	}
@@ -68,14 +107,51 @@ static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int
 static int smp_lora_uplink(struct net_buf *nb)
 {
 	int rc;
+	uint8_t data_size;
+	uint8_t temp;
 
-	rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, nb->data, nb->len,
-			  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ? LORAWAN_MSG_CONFIRMED :
-			   LORAWAN_MSG_UNCONFIRMED));
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORA_FRAGMENTED_UPLINKS
+	uint16_t pos = 0;
 
-	if (rc != 0) {
-		LOG_ERR("Failed to send LoRa SMP message: %d", rc);
+	while (pos < nb->len) {
+		uint8_t *data;
+
+		lorawan_get_payload_sizes(&data_size, &temp);
+
+		if (data_size > (nb->len - pos)) {
+			data_size = (nb->len - pos);
+		}
+
+		data = net_buf_pull_mem(nb, data_size);
+
+		rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, data, data_size,
+				  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ?
+				   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
+
+		if (rc != 0) {
+			LOG_ERR("Failed to send LoRa SMP message: %d, sent %d of %d", rc, pos,
+				nb->len);
+			break;
+		}
+
+		pos += data_size;
 	}
+#else
+	lorawan_get_payload_sizes(&data_size, &temp);
+
+	if (nb->len > data_size) {
+		LOG_ERR("Cannot send LoRa SMP message, too large. Message: %d, maximum: %d",
+			nb->len, data_size);
+	} else {
+		rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, nb->data, nb->len,
+				  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ?
+				   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
+
+		if (rc != 0) {
+			LOG_ERR("Failed to send LoRa SMP message: %d", rc);
+		}
+	}
+#endif
 
 	smp_packet_free(nb);
 
@@ -111,6 +187,10 @@ static void smp_lora_start(void)
 	} else {
 		LOG_ERR("Failed to init LoRa MCUmgr SMP transport: %d", rc);
 	}
+
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORA_REASSEMBLY
+	smp_reassembly_init(&smp_lora_transport);
+#endif
 }
 
 MCUMGR_HANDLER_DEFINE(smp_lora, smp_lora_start);
