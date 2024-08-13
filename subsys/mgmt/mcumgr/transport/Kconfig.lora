@@ -44,7 +44,7 @@ config MCUMGR_TRANSPORT_LORA_REASSEMBLY
 
 config MCUMGR_TRANSPORT_LORA_POLL_FOR_DATA
 	bool "Send empty packet if partial packet received"
-	depends on CONFIG_MCUMGR_TRANSPORT_LORA_REASSEMBLY
+	depends on MCUMGR_TRANSPORT_LORA_REASSEMBLY
 	default y
 	help
 	  Will send an empty packet if a partial (fragmented) message has been recieved from the

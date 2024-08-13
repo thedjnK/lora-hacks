@@ -42,6 +42,79 @@ struct smp_client_transport_entry smp_lora_client_transport = {
 };
 #endif
 
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORA_POLL_FOR_DATA
+static struct k_thread smp_lora_thread;
+K_KERNEL_STACK_MEMBER(smp_lora_stack, 1650);
+K_FIFO_DEFINE(smp_lora_fifo);
+
+struct smp_lora_uplink_message_t {
+	void *fifo_reserved;
+	struct net_buf *nb;
+	struct k_sem my_sem;
+};
+
+static struct smp_lora_uplink_message_t empty_message = {
+	.nb = NULL,
+};
+
+static void smp_lora_uplink_thread(void *p1, void *p2, void *p3)
+{
+	struct smp_lora_uplink_message_t *msg;
+
+	while (1) {
+		msg = k_fifo_get(&smp_lora_fifo, K_FOREVER);
+		uint16_t size = 0;
+		uint16_t pos = 0;
+
+		if (msg->nb != NULL) {
+			size = msg->nb->len;
+		}
+
+		while (pos < size || size == 0) {
+			uint8_t *data = NULL;
+			uint8_t data_size;
+			uint8_t temp;
+			uint8_t tries = 3;
+
+			lorawan_get_payload_sizes(&data_size, &temp);
+
+			if (data_size > size) {
+				data_size = size;
+			}
+
+			if (size > 0) {
+				data = net_buf_pull_mem(msg->nb, data_size);
+			}
+
+			while (tries > 0) {
+				int rc;
+
+				rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, data, data_size,
+						  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ?
+						   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
+
+				if (rc != 0) {
+					--tries;
+				} else {
+					break;
+				}
+			}
+
+			if (size == 0) {
+				break;
+			}
+
+			pos += data_size;
+		}
+
+		/* For empty packets, do not trigger semaphore */
+		if (size != 0) {
+		    k_sem_give(&msg->my_sem);
+		}
+	}
+}
+#endif
+
 static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int8_t snr,
 			      uint8_t len, const uint8_t *hex_data)
 {
@@ -56,7 +129,9 @@ static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int
 		if (len == 0) {
 			/* Empty packet is used to clear partially queued data */
 			(void)smp_reassembly_drop(&smp_lora_transport);
+LOG_ERR("empty message, clear queue");
 		} else {
+LOG_ERR("smp message %d bytes", len);
 			rc = smp_reassembly_collect(&smp_lora_transport, hex_data, len);
 
 			if (rc == 0) {
@@ -65,20 +140,17 @@ static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int
 				if (rc) {
 					LOG_ERR("LoRa SMP reassembly complete failed: %d", rc);
 				}
+else {
+LOG_ERR("smp reassembly finished");
+}
 			} else if (rc < 0) {
 				LOG_ERR("LoRa SMP reassembly collect failed: %d", rc);
 			} else {
-				LOG_DBG("LoRa SMP expected data left: %d", rc);
+				LOG_ERR("LoRa SMP expected data left: %d", rc);
 
 #ifdef CONFIG_MCUMGR_TRANSPORT_LORA_POLL_FOR_DATA
 				/* Send empty LoRa packet to receive next packet from server */
-				rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, NULL, 0,
-					  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ?
-					   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
-
-				if (rc) {
-					LOG_ERR("LoRa SMP send empty message failed: %d", rc);
-				}
+			        k_fifo_put(&smp_lora_fifo, &empty_message);
 #endif
 			}
 		}
@@ -106,36 +178,18 @@ static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int
 
 static int smp_lora_uplink(struct net_buf *nb)
 {
-	int rc;
+	int rc = 0;
 	uint8_t data_size;
 	uint8_t temp;
 
 #ifdef CONFIG_MCUMGR_TRANSPORT_LORA_FRAGMENTED_UPLINKS
-	uint16_t pos = 0;
+	struct smp_lora_uplink_message_t tx_data = {
+		.nb = nb,
+	};
 
-	while (pos < nb->len) {
-		uint8_t *data;
-
-		lorawan_get_payload_sizes(&data_size, &temp);
-
-		if (data_size > (nb->len - pos)) {
-			data_size = (nb->len - pos);
-		}
-
-		data = net_buf_pull_mem(nb, data_size);
-
-		rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORA_PORT, data, data_size,
-				  (CONFIG_MCUMGR_TRANSPORT_LORA_CONFIRMED_PACKETS ?
-				   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
-
-		if (rc != 0) {
-			LOG_ERR("Failed to send LoRa SMP message: %d, sent %d of %d", rc, pos,
-				nb->len);
-			break;
-		}
-
-		pos += data_size;
-	}
+	k_sem_init(&tx_data.my_sem, 0, 1);
+        k_fifo_put(&smp_lora_fifo, &tx_data);
+	k_sem_take(&tx_data.my_sem, K_FOREVER);
 #else
 	lorawan_get_payload_sizes(&data_size, &temp);
 
@@ -190,6 +244,15 @@ static void smp_lora_start(void)
 
 #ifdef CONFIG_MCUMGR_TRANSPORT_LORA_REASSEMBLY
 	smp_reassembly_init(&smp_lora_transport);
+#endif
+
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORA_POLL_FOR_DATA
+	k_thread_create(&smp_lora_thread, smp_lora_stack,
+			K_KERNEL_STACK_SIZEOF(smp_lora_stack),
+			smp_lora_uplink_thread, NULL, NULL, NULL,
+			3, 0, K_FOREVER);
+
+	k_thread_start(&smp_lora_thread);
 #endif
 }
 
