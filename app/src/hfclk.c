@@ -12,66 +12,60 @@
 
 LOG_MODULE_REGISTER(hfclk, CONFIG_APP_HFCLK_LOG_LEVEL);
 
-#define HFCLK_START_TIMEOUT K_MSEC(50)
+#define HFCLK_START_TIMEOUT K_MSEC(200)
 
-static K_SEM_DEFINE(hfclk_ready_sem, 0, 1);
-static struct onoff_client hfclk_client;
+static K_SEM_DEFINE(hfclk_usage_sem, 1, 1);
 static uint8_t hfclk_count = 0;
-static struct onoff_manager *hfclk_manager;
-
-static void clock_ready(struct onoff_manager *manager, struct onoff_client *client, uint32_t state,
-			int rc)
-{
-	k_sem_give(&hfclk_ready_sem);
-}
+static const struct device *const clock = DEVICE_DT_GET(DT_NODELABEL(clock));
 
 int hfclk_enable()
 {
-	int rc;
+	int rc = 0;
 
-	rc = onoff_request(hfclk_manager, &hfclk_client);
+	k_sem_take(&hfclk_usage_sem, K_FOREVER);
 
-	if (rc < 0) {
-		LOG_ERR("HFCLK enable failed: %d", rc);
-		goto finish;
+	if (hfclk_count == 0) {
+		rc = clock_control_on(clock, CLOCK_CONTROL_NRF_TYPE_HFCLK);
+
+		if (rc < 0) {
+			LOG_ERR("HFCLK enable failed: %d", rc);
+			goto finish;
+		}
 	}
 
-	rc = k_sem_take(&hfclk_ready_sem, HFCLK_START_TIMEOUT);
-
-	if (rc != 0) {
-		LOG_ERR("HFCLK start wait timeout: %d", rc);
-	} else {
-		++hfclk_count;
-	}
+	++hfclk_count;
 
 finish:
+	k_sem_give(&hfclk_usage_sem);
+
 	return rc;
 }
 
 int hfclk_disable()
 {
-	int rc;
+	int rc = 0;
+
+	k_sem_take(&hfclk_usage_sem, K_FOREVER);
 
 	if (hfclk_count == 0) {
 		LOG_ERR("Tried to disable HFCLK when HFCLK is not running");
-		return -EINVAL;
+		rc = -EINVAL;
+		goto finish;
+	} else if (hfclk_count > 1) {
+		--hfclk_count;
+		goto finish;
 	}
 
-	rc = onoff_release(hfclk_manager);
+	rc = clock_control_off(clock, CLOCK_CONTROL_NRF_TYPE_HFCLK);
 
 	if (rc < 0) {
 		LOG_ERR("HFCLK disable failed: %d", rc);
 	} else {
-		--hfclk_count;
+		hfclk_count = 0;
 	}
 
+finish:
+	k_sem_give(&hfclk_usage_sem);
+
 	return rc;
-}
-
-int hfclk_setup()
-{
-	hfclk_manager = z_nrf_clock_control_get_onoff(CLOCK_CONTROL_NRF_SUBSYS_HF);
-	sys_notify_init_callback(&hfclk_client.notify, clock_ready);
-
-	return 0;
 }
