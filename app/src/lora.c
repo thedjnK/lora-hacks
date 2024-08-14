@@ -165,19 +165,8 @@ int lora_send_message(uint8_t *data, uint16_t length, bool force_confirmed, uint
 		confirmed = unconfirmed_packets == CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER ? true : false;
 #endif
 
-
 		if (force_confirmed == true) {
 			confirmed = true;
-#if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
-		} else if (confirmed == false) {
-			++unconfirmed_packets;
-
-			if (unconfirmed_packets == CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER) {
-				unconfirmed_packets = 0;
-			} else {
-				++unconfirmed_packets;
-			}
-#endif
 		}
 
 		rc = lorawan_send(1, data, length, (confirmed == true ? LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
@@ -190,6 +179,14 @@ int lora_send_message(uint8_t *data, uint16_t length, bool force_confirmed, uint
 				k_sleep(LORA_SEND_FAIL_DELAY);
 			}
 		} else {
+#if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
+			if (unconfirmed_packets == CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER) {
+				unconfirmed_packets = 0;
+			} else {
+				++unconfirmed_packets;
+			}
+#endif
+
 			break;
 		}
 	}
