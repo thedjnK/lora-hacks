@@ -6,15 +6,17 @@
 
 menu "Application"
 
-config APP_SENSOR_READING_TIME
-	int "Time (in seconds) between samples"
+config APP_DEFAULT_SENSOR_READING_TIME
+	int "Default time (in seconds) between samples"
 	default 150
 	range 30 7200
+	help
+	  Can be changed at run-time via a LoRa command.
 
 config APP_LORA_CONFIRMED_PACKET_ALWAYS
 	bool "Always use confirmed packets"
 	help
-	  If set, will always use confirmed packets for application LoRa messages
+	  If set, will always use confirmed packets for application LoRa messages.
 
 config APP_LORA_CONFIRMED_PACKET_AFTER
 	int "Number of unconfirmed packets before confirmed packet"

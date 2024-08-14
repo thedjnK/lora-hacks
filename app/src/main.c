@@ -9,6 +9,7 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/storage/flash_map.h>
+#include <zephyr/sys_clock.h>
 #include "settings.h"
 #include "sensor.h"
 #include "lora.h"
@@ -24,7 +25,8 @@
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 
-#define SENSOR_READING_TIME K_SECONDS(CONFIG_APP_SENSOR_READING_TIME)
+#define SENSOR_READING_TIME_MIN 30
+#define SENSOR_READING_TIME_MAX 7200
 #define SEND_ATTEMPTS 3
 #define ADC_OFFSET_DEFAULT_MV 500
 
@@ -34,6 +36,7 @@ enum lora_uplink_types {
 	LORA_UPLINK_TYPE_ERROR_READINGS,
 	LORA_UPLINK_TYPE_ERROR_ADC,
 	LORA_UPLINK_TYPE_ERROR_NO_HANDLER,
+	LORA_UPLINK_TYPE_UPTIME,
 };
 
 enum lora_downlink_types {
@@ -48,9 +51,13 @@ enum device_command_op_t {
 	DEVICE_COMMAND_OP_REBOOT,
 	DEVICE_COMMAND_OP_CLEAR_SETTINGS,
 	DEVICE_COMMAND_OP_BLINK_LED,
+	DEVICE_COMMAND_OP_GET_UPTIME,
+	DEVICE_COMMAND_OP_SET_SENSOR_INTEVAL,
 
 	DEVICE_COMMAND_OP_COUNT,
 };
+
+static uint16_t sensor_reading_time = CONFIG_APP_DEFAULT_SENSOR_READING_TIME;
 
 int main(void)
 {
@@ -218,12 +225,12 @@ first_start:
 		watchdog_feed();
 #endif
 
-		k_sleep(SENSOR_READING_TIME);
+		k_sleep(K_SECONDS(sensor_reading_time));
 	}
 }
 
 #ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
-static int device_command(enum device_command_op_t op)
+static int device_command(const enum device_command_op_t op, const uint8_t *data, const uint8_t data_size)
 {
 	switch (op) {
 		case DEVICE_COMMAND_OP_REBOOT:
@@ -261,6 +268,41 @@ static int device_command(enum device_command_op_t op)
 			led_off(LED_BLUE);
 			break;
 		}
+		case DEVICE_COMMAND_OP_GET_UPTIME:
+		{
+			int rc;
+			uint32_t uptime = (uint32_t)(k_uptime_get() / MSEC_PER_SEC);
+			uint8_t response[5];
+
+			response[0] = LORA_UPLINK_TYPE_UPTIME;
+			memcpy(&response[1], &uptime, sizeof(uptime));
+
+			(void)hfclk_enable();
+
+			rc = lora_send_message(response, sizeof(response), false, SEND_ATTEMPTS);
+
+			if (rc == 0) {
+				LOG_INF("Message sent");
+			} else {
+				LOG_ERR("Message failed to send: %d", rc);
+			}
+
+			(void)hfclk_disable();
+			break;
+		}
+		case DEVICE_COMMAND_OP_SET_SENSOR_INTEVAL:
+		{
+			const uint16_t *reading_time = (uint16_t *)data;
+
+			if (data_size != sizeof(uint16_t)) {
+				return -EINVAL;
+			} else if (*reading_time < SENSOR_READING_TIME_MIN || *reading_time > SENSOR_READING_TIME_MAX) {
+				return -EINVAL;
+			}
+
+			sensor_reading_time = *reading_time;
+			break;
+		}
 		default:
 		{
 			return -EINVAL;
@@ -278,7 +320,7 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 
 	if (port == 1) {
 		if (len == 0) {
-			LOG_ERR("Received 0 byte download on port 1");
+			LOG_DBG("Received 0 byte download on port 1");
 			return;
 		}
 
@@ -315,7 +357,7 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 
 			case LORA_DOWNLINK_TYPE_DEVICE:
 			{
-				device_command(data[1]);
+				device_command(data[1], &data[2], (len - 2));
 				break;
 			}
 
