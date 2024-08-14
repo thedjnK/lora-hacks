@@ -57,7 +57,12 @@ enum device_command_op_t {
 	DEVICE_COMMAND_OP_COUNT,
 };
 
+enum send_flags_t {
+	SEND_FLAG_UPTIME = 0x01,
+};
+
 static uint16_t sensor_reading_time = CONFIG_APP_DEFAULT_SENSOR_READING_TIME;
+static uint8_t send_flags = 0;
 
 int main(void)
 {
@@ -67,6 +72,9 @@ int main(void)
 	int8_t humidity[2];
 	uint8_t lora_data[8];
 	uint8_t data_size;
+	uint8_t failed_messages = 0;
+	bool lora_joined = false;
+	bool lora_sent_join_message = false;
 
 #ifdef CONFIG_ADC
 	uint16_t voltage;
@@ -122,41 +130,60 @@ int main(void)
 	k_sleep(K_MSEC(300));
 	led_off(LED_BLUE);
 
-	/* Enable HFCLK for better timing during setup */
-	(void)hfclk_enable();
-
-	rc = lora_setup();
-
-	if (rc != 0) {
-		LOG_ERR("LoRa setup failed: cannot continue");
-		return 0;
-	}
-
-	/* Send connect message with version and application type */
-	data_size = 0;
-	lora_data[data_size++] = LORA_UPLINK_TYPE_STARTUP;
-	lora_data[data_size++] = APP_VERSION_MAJOR;
-	lora_data[data_size++] = APP_VERSION_MINOR;
-	lora_data[data_size++] = APP_PATCHLEVEL;
-	lora_data[data_size++] = APP_TWEAK;
-	lora_data[data_size++] = ((uint8_t *)&application_type)[0];
-	lora_data[data_size++] = ((uint8_t *)&application_type)[1];
-
-	rc = lora_send_message(lora_data, data_size, true, SEND_ATTEMPTS);
-
-	if (rc == 0) {
-		LOG_INF("Connect message sent");
-	} else {
-		LOG_ERR("Connect message failed to send: %d", rc);
-	}
-
-	/* Skip enabling clock for the first iteration as it is already enabled */
-	goto first_start;
-
 	while (1) {
 		(void)hfclk_enable();
 
-first_start:
+		if (lora_joined == false) {
+			rc = lora_setup();
+
+			if (rc == 0) {
+				lora_joined = true;
+			} else {
+				goto wait;
+			}
+		}
+
+		if (lora_sent_join_message == false) {
+			/* Send connect message with version and application type */
+			data_size = 0;
+			lora_data[data_size++] = LORA_UPLINK_TYPE_STARTUP;
+			lora_data[data_size++] = APP_VERSION_MAJOR;
+			lora_data[data_size++] = APP_VERSION_MINOR;
+			lora_data[data_size++] = APP_PATCHLEVEL;
+			lora_data[data_size++] = APP_TWEAK;
+			lora_data[data_size++] = ((uint8_t *)&application_type)[0];
+			lora_data[data_size++] = ((uint8_t *)&application_type)[1];
+
+			rc = lora_send_message(lora_data, data_size, true, SEND_ATTEMPTS);
+
+			if (rc == 0) {
+				LOG_INF("Connect message sent");
+				lora_sent_join_message = true;
+			} else {
+				LOG_ERR("Connect message failed to send: %d", rc);
+				++failed_messages;
+				goto wait;
+			}
+		}
+
+		if (send_flags & SEND_FLAG_UPTIME) {
+			/* Send device uptime */
+			uint32_t uptime = (uint32_t)(k_uptime_get() / MSEC_PER_SEC);
+
+			lora_data[0] = LORA_UPLINK_TYPE_UPTIME;
+			memcpy(&lora_data[1], &uptime, sizeof(uptime));
+
+			rc = lora_send_message(lora_data, 5, false, SEND_ATTEMPTS);
+
+			if (rc == 0) {
+				LOG_INF("Message sent");
+				send_flags &= ~SEND_FLAG_UPTIME;
+			} else {
+				LOG_ERR("Message failed to send: %d", rc);
+				++failed_messages;
+			}
+		}
+
 		data_size = 0;
 
 		rc = sensor_fetch_readings(temperature, humidity);
@@ -217,13 +244,24 @@ first_start:
 			LOG_INF("Message sent");
 		} else {
 			LOG_ERR("Message failed to send: %d", rc);
+			++failed_messages;
 		}
 
+wait:
 		(void)hfclk_disable();
 
 #ifdef CONFIG_APP_WATCHDOG
 		watchdog_feed();
 #endif
+
+		if (failed_messages > CONFIG_APP_LORA_RECONNECT_FAILED_PACKETS) {
+			/* No successful messages after a period of time, consider connection dead
+			 * and reconnect
+			 */
+			failed_messages = 0;
+			lora_joined = false;
+			lora_sent_join_message = false;
+		}
 
 		k_sleep(K_SECONDS(sensor_reading_time));
 	}
@@ -270,24 +308,7 @@ static int device_command(const enum device_command_op_t op, const uint8_t *data
 		}
 		case DEVICE_COMMAND_OP_GET_UPTIME:
 		{
-			int rc;
-			uint32_t uptime = (uint32_t)(k_uptime_get() / MSEC_PER_SEC);
-			uint8_t response[5];
-
-			response[0] = LORA_UPLINK_TYPE_UPTIME;
-			memcpy(&response[1], &uptime, sizeof(uptime));
-
-			(void)hfclk_enable();
-
-			rc = lora_send_message(response, sizeof(response), false, SEND_ATTEMPTS);
-
-			if (rc == 0) {
-				LOG_INF("Message sent");
-			} else {
-				LOG_ERR("Message failed to send: %d", rc);
-			}
-
-			(void)hfclk_disable();
+			send_flags |= SEND_FLAG_UPTIME;
 			break;
 		}
 		case DEVICE_COMMAND_OP_SET_SENSOR_INTEVAL:
