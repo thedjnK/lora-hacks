@@ -13,6 +13,7 @@
 #include "leds.h"
 #include "watchdog.h"
 
+#define LORA_JOIN_SUCCESS_LED_BLINK_TIME K_MSEC(750)
 #define LORA_JOIN_FAIL_LED_BLINK_TIME K_MSEC(750)
 #define LORA_JOIN_FAIL_DELAY K_SECONDS(30)
 #define LORA_SEND_FAIL_DELAY K_SECONDS(5)
@@ -118,6 +119,7 @@ int lora_setup(void)
 			led_blink(LED_RED, LORA_JOIN_FAIL_LED_BLINK_TIME);
 			k_sleep(LORA_JOIN_FAIL_DELAY);
 		} else if (rc == 0) {
+			led_blink(LED_GREEN, LORA_JOIN_SUCCESS_LED_BLINK_TIME);
 			break;
 		}
 	}
