@@ -52,6 +52,8 @@ static struct bt_data sd[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE, device_name, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
 };
 
+static struct bt_conn *active_conn;
+
 #if defined(CONFIG_BT_SMP)
 /* Advertising interval minimum/maximum in 0.625us units, 1.375-2.125 seconds */
 #define BT_ADV_INTERVAL_MIN 2200
@@ -59,7 +61,6 @@ static struct bt_data sd[] = {
 
 static uint8_t bonds;
 static uint8_t gatt_value;
-static struct bt_conn *active_conn;
 
 static void bond_loop(const struct bt_bond_info *info, void *user_data);
 static void bond_check_loop(const struct bt_bond_info *info, void *user_data);
@@ -182,12 +183,11 @@ static void connected(struct bt_conn *conn, uint8_t err)
 		LOG_ERR("Connection failed (err 0x%02x)", err);
 		do_advert();
 	} else {
+		active_conn = conn;
 		in_connection = true;
 		LOG_INF("Connected");
 
 #if defined(CONFIG_BT_SMP)
-		active_conn = conn;
-
 		if (bonds == CONFIG_BT_MAX_PAIRED) {
 			/* Check if this is a bonded device or not, if not, disconnect */
 			struct bond_check_data_t bond_check_data = {
@@ -210,11 +210,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	in_connection = false;
-
-#if defined(CONFIG_BT_SMP)
 	active_conn = NULL;
-#endif
-
 	do_advert();
 }
 
@@ -264,6 +260,53 @@ static void button_pressed(const struct device *dev, struct gpio_callback *cb, u
 }
 #endif
 #endif
+
+int bluetooth_remote(enum bluetooth_remote_op_t op)
+{
+	if (op >= BLUETOOTH_REMOTE_OP_COUNT) {
+		return -EINVAL;
+	}
+
+	switch (op) {
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
+		case BLUETOOTH_REMOTE_OP_ADVERT_START:
+		{
+#if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
+			k_work_submit(&button_work);
+#else
+			advertise2(NULL);
+#endif
+			break;
+		}
+		case BLUETOOTH_REMOTE_OP_ADVERT_STOP:
+		{
+			stop_advertising_function(NULL);
+			break;
+		}
+#endif
+		case BLUETOOTH_REMOTE_OP_ADVERT_DISCONNECT:
+		{
+			if (in_connection) {
+				bt_conn_disconnect(active_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+			} else {
+				return -ENOTCONN;
+			}
+		}
+#if defined(CONFIG_BT_SMP)
+		case BLUETOOTH_REMOTE_OP_ADVERT_CLEAR_BONDS:
+		{
+			bluetooth_clear_bonds();
+			break;
+		}
+#endif
+		default:
+		{
+			return -EINVAL;
+		}
+	};
+
+	return 0;
+}
 
 #if defined(CONFIG_BT_SMP)
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)

@@ -38,6 +38,7 @@ enum lora_downlink_types {
 	LORA_DOWNLINK_TYPE_IR,
 	LORA_DOWNLINK_TYPE_SETTING,
 	LORA_DOWNLINK_TYPE_GARAGE,
+	LORA_DOWNLINK_TYPE_BLUETOOTH,
 };
 
 int main(void)
@@ -231,6 +232,14 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 			case LORA_DOWNLINK_TYPE_GARAGE:
 			{
 				garage_door_open_close();
+				break;
+			}
+#endif
+
+#ifdef CONFIG_BT
+			case LORA_DOWNLINK_TYPE_BLUETOOTH:
+			{
+				bluetooth_remote(data[1]);
 				break;
 			}
 #endif
