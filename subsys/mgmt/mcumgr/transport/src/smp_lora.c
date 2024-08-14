@@ -16,6 +16,9 @@
 
 #define SMP_LORA_TRANSPORT SMP_USER_DEFINED_TRANSPORT
 
+extern int hfclk_enable(void);
+extern int hfclk_disable(void);
+
 LOG_MODULE_REGISTER(smp_lora, CONFIG_MCUMGR_TRANSPORT_LORA_LOG_LEVEL);
 
 static void smp_lora_downlink(uint8_t port, bool data_pending, int16_t rssi, int8_t snr,
@@ -70,6 +73,8 @@ static void smp_lora_uplink_thread(void *p1, void *p2, void *p3)
 			size = msg->nb->len;
 		}
 
+		(void)hfclk_enable();
+
 		while (pos < size || size == 0) {
 			uint8_t *data = NULL;
 			uint8_t data_size;
@@ -111,6 +116,8 @@ static void smp_lora_uplink_thread(void *p1, void *p2, void *p3)
 		if (size != 0) {
 		    k_sem_give(&msg->my_sem);
 		}
+
+		(void)hfclk_disable();
 	}
 }
 #endif
@@ -179,8 +186,6 @@ LOG_ERR("smp reassembly finished");
 static int smp_lora_uplink(struct net_buf *nb)
 {
 	int rc = 0;
-	uint8_t data_size;
-	uint8_t temp;
 
 #ifdef CONFIG_MCUMGR_TRANSPORT_LORA_FRAGMENTED_UPLINKS
 	struct smp_lora_uplink_message_t tx_data = {
@@ -191,6 +196,9 @@ static int smp_lora_uplink(struct net_buf *nb)
         k_fifo_put(&smp_lora_fifo, &tx_data);
 	k_sem_take(&tx_data.my_sem, K_FOREVER);
 #else
+	uint8_t data_size;
+	uint8_t temp;
+
 	lorawan_get_payload_sizes(&data_size, &temp);
 
 	if (nb->len > data_size) {
