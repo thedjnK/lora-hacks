@@ -104,6 +104,17 @@ int main(void)
 	}
 #endif
 
+	/* LED flashing to indicate start up */
+	led_on(LED_RED);
+	k_sleep(K_MSEC(300));
+	led_off(LED_RED);
+	led_on(LED_GREEN);
+	k_sleep(K_MSEC(300));
+	led_off(LED_GREEN);
+	led_on(LED_BLUE);
+	k_sleep(K_MSEC(300));
+	led_off(LED_BLUE);
+
 	/* Enable HFCLK for better timing during setup */
 	(void)hfclk_enable();
 
