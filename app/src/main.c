@@ -7,6 +7,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
+#include <zephyr/sys/reboot.h>
+#include <zephyr/storage/flash_map.h>
 #include "settings.h"
 #include "sensor.h"
 #include "lora.h"
@@ -39,6 +41,15 @@ enum lora_downlink_types {
 	LORA_DOWNLINK_TYPE_SETTING,
 	LORA_DOWNLINK_TYPE_GARAGE,
 	LORA_DOWNLINK_TYPE_BLUETOOTH,
+	LORA_DOWNLINK_TYPE_DEVICE,
+};
+
+enum device_command_op_t {
+	DEVICE_COMMAND_OP_REBOOT,
+	DEVICE_COMMAND_OP_CLEAR_SETTINGS,
+	DEVICE_COMMAND_OP_BLINK_LED,
+
+	DEVICE_COMMAND_OP_COUNT,
 };
 
 int main(void)
@@ -146,7 +157,7 @@ first_start:
 #ifdef CONFIG_APP_EXTERNAL_DCDC
 				int16_t adc_offset;
 
-			        rc = settings_runtime_get("app/power_offset", (uint8_t *)&adc_offset, sizeof(adc_offset));
+				rc = settings_runtime_get("app/power_offset", (uint8_t *)&adc_offset, sizeof(adc_offset));
 
 				if (rc != sizeof(adc_offset) || adc_offset == 0) {
 					/* No offset, use default */
@@ -201,6 +212,53 @@ first_start:
 }
 
 #ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
+static int device_command(enum device_command_op_t op)
+{
+	switch (op) {
+		case DEVICE_COMMAND_OP_REBOOT:
+		{
+			sys_reboot(SYS_REBOOT_COLD);
+			break;
+		}
+		case DEVICE_COMMAND_OP_CLEAR_SETTINGS:
+		{
+			const struct flash_area *fap;
+			int rc = flash_area_open(FIXED_PARTITION_ID(storage_partition), &fap);
+
+			if (rc < 0) {
+				return -ENOENT;
+			} else {
+				rc = flash_area_flatten(fap, 0, fap->fa_size);
+
+				if (rc < 0) {
+					return -EIO;
+				}
+
+				flash_area_close(fap);
+			}
+
+			break;
+		}
+		case DEVICE_COMMAND_OP_BLINK_LED:
+		{
+			led_on(LED_RED);
+			led_on(LED_GREEN);
+			led_on(LED_BLUE);
+			k_sleep(K_SECONDS(3));
+			led_off(LED_RED);
+			led_off(LED_GREEN);
+			led_off(LED_BLUE);
+			break;
+		}
+		default:
+		{
+			return -EINVAL;
+		}
+	};
+
+	return 0;
+}
+
 void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 {
 	uint8_t response[2];
@@ -243,6 +301,12 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 				break;
 			}
 #endif
+
+			case LORA_DOWNLINK_TYPE_DEVICE:
+			{
+				device_command(data[1]);
+				break;
+			}
 
 			default:
 			{

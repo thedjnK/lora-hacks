@@ -263,10 +263,6 @@ static void button_pressed(const struct device *dev, struct gpio_callback *cb, u
 
 int bluetooth_remote(enum bluetooth_remote_op_t op)
 {
-	if (op >= BLUETOOTH_REMOTE_OP_COUNT) {
-		return -EINVAL;
-	}
-
 	switch (op) {
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 		case BLUETOOTH_REMOTE_OP_ADVERT_START:
