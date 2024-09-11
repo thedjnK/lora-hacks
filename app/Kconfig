@@ -31,7 +31,6 @@ config APP_LORA_RECONNECT_FAILED_PACKETS
 	int "Number of packet send failures before re-connection"
 	default 5
 	range 1 50
-	depends on !APP_WATCHDOG
 	help
 	  Number of messages send that fail before reconnecting to the LoRa server.
 
