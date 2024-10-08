@@ -5,6 +5,8 @@
  */
 
 #include <zephyr/kernel.h>
+#include "peripherals.h"
+#include "nrf51_amli.h"
 
 void peripheral_setup(void)
 {
@@ -41,4 +43,6 @@ void peripheral_setup(void)
 #if !(CONFIG_LOG) && !(CONFIG_SHELL)
 	NRF_UART0->POWER = 0;
 #endif
+
+	nrf51_almi_setup();
 }
