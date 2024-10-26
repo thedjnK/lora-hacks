@@ -4,6 +4,9 @@
  * All right reserved. This code is NOT apache or FOSS/copyleft licensed.
  */
 
+#ifndef APP_BLUETOOTH_H
+#define APP_BLUETOOTH_H
+
 #include <zephyr/kernel.h>
 
 enum bluetooth_remote_op_t {
@@ -32,3 +35,5 @@ void bluetooth_clear_bonds(void);
 
 /* Remote LoRa function for bluetooth */
 int bluetooth_remote(enum bluetooth_remote_op_t op);
+
+#endif /* APP_BLUETOTH_H */

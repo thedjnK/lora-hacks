@@ -4,6 +4,9 @@
  * All right reserved. This code is NOT apache or FOSS/copyleft licensed.
  */
 
+#ifndef APP_SETTINGS_H
+#define APP_SETTINGS_H
+
 #define LORA_DEV_EUI_SIZE 8
 #define LORA_JOIN_EUI_SIZE 8
 #define LORA_APP_KEY_SIZE 16
@@ -33,3 +36,5 @@ void app_keys_clear(void);
 
 /* Set setting (from LoRa) */
 void setting_lora(enum lora_setting_index index, const uint8_t *data, uint8_t data_size);
+
+#endif /* APP_SETTINGS_H */

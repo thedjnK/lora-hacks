@@ -4,6 +4,9 @@
  * All right reserved. This code is NOT apache or FOSS/copyleft licensed.
  */
 
+#ifndef APP_LEDS_H
+#define APP_LEDS_H
+
 #include <zephyr/kernel.h>
 
 enum led_t {
@@ -25,3 +28,5 @@ void led_off(enum led_t led);
 
 /* Blink an LED once for the specified duration */
 void led_blink(enum led_t led, k_timeout_t delay);
+
+#endif /* APP_LEDS_H */
