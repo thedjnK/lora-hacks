@@ -14,6 +14,8 @@
 #include <mgmt/mcumgr/transport/smp_internal.h>
 #include <mgmt/mcumgr/transport/smp_reassembly.h>
 
+#include "error_messages.h"
+
 #define SMP_LORAWAN_TRANSPORT SMP_USER_DEFINED_TRANSPORT
 
 extern int hfclk_enable(void);
@@ -45,16 +47,16 @@ struct smp_client_transport_entry smp_lorawan_client_transport = {
 };
 #endif
 
-#ifdef CONFIG_MCUMGR_TRANSPORT_LORAWAN_POLL_FOR_DATA
-static struct k_thread smp_lorawan_thread;
-K_KERNEL_STACK_MEMBER(smp_lorawan_stack, 1650);
-K_FIFO_DEFINE(smp_lorawan_fifo);
-
 struct smp_lorawan_uplink_message_t {
 	void *fifo_reserved;
 	struct net_buf *nb;
 	struct k_sem my_sem;
 };
+
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORAWAN_POLL_FOR_DATA
+static struct k_thread smp_lorawan_thread;
+K_KERNEL_STACK_MEMBER(smp_lorawan_stack, 1650);
+K_FIFO_DEFINE(smp_lorawan_fifo);
 
 static struct smp_lorawan_uplink_message_t empty_message = {
 	.nb = NULL,
@@ -158,6 +160,11 @@ LOG_ERR("smp reassembly finished");
 #ifdef CONFIG_MCUMGR_TRANSPORT_LORAWAN_POLL_FOR_DATA
 				/* Send empty LoRaWAN packet to receive next packet from server */
 			        k_fifo_put(&smp_lorawan_fifo, &empty_message);
+#else
+				/* Queue empty message */
+				error_message_lock();
+				error_message_add_error(NULL, 0);
+				error_message_unlock();
 #endif
 			}
 		}
@@ -187,14 +194,51 @@ static int smp_lorawan_uplink(struct net_buf *nb)
 {
 	int rc = 0;
 
-#ifdef CONFIG_MCUMGR_TRANSPORT_LORAWAN_FRAGMENTED_UPLINKS
-	struct smp_lorawan_uplink_message_t tx_data = {
-		.nb = nb,
-	};
+	(void)hfclk_enable();
 
-	k_sem_init(&tx_data.my_sem, 0, 1);
-        k_fifo_put(&smp_lorawan_fifo, &tx_data);
-	k_sem_take(&tx_data.my_sem, K_FOREVER);
+#ifdef CONFIG_MCUMGR_TRANSPORT_LORAWAN_FRAGMENTED_UPLINKS
+	uint16_t pos = 0;
+
+	while (pos < nb->len) {
+		uint16_t size = 0;
+
+		while (pos < size || size == 0) {
+			uint8_t *data = NULL;
+			uint8_t data_size;
+			uint8_t temp;
+			uint8_t tries = 3;
+
+			lorawan_get_payload_sizes(&data_size, &temp);
+
+			if (data_size > size) {
+				data_size = size;
+			}
+
+			if (size > 0) {
+				data = net_buf_pull_mem(nb, data_size);
+			}
+
+			while (tries > 0) {
+				int rc;
+
+				rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORAWAN_PORT, data, data_size,
+						  (CONFIG_MCUMGR_TRANSPORT_LORAWAN_CONFIRMED_PACKETS ?
+						   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
+
+				if (rc != 0) {
+					--tries;
+				} else {
+					break;
+				}
+			}
+
+			if (size == 0) {
+				break;
+			}
+
+			pos += data_size;
+		}
+	}
 #else
 	uint8_t data_size;
 	uint8_t temp;
@@ -215,6 +259,7 @@ static int smp_lorawan_uplink(struct net_buf *nb)
 	}
 #endif
 
+	(void)hfclk_disable();
 	smp_packet_free(nb);
 
 	return rc;

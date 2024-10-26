@@ -54,7 +54,6 @@ config MCUMGR_TRANSPORT_LORAWAN_REASSEMBLY
 config MCUMGR_TRANSPORT_LORAWAN_POLL_FOR_DATA
 	bool "Send empty packet if partial packet received"
 	depends on MCUMGR_TRANSPORT_LORAWAN_REASSEMBLY
-	default y
 	help
 	  Will send an empty packet if a partial (fragmented) message has been recieved from the
 	  server, this will allow the next packet to be recieved without waiting for next

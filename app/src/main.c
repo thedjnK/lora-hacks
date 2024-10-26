@@ -21,6 +21,7 @@
 #include "garage.h"
 #include "hfclk.h"
 #include "watchdog.h"
+#include "error_messages.h"
 #include "app_version.h"
 
 LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
@@ -61,8 +62,22 @@ enum send_flags_t {
 	SEND_FLAG_UPTIME = 0x01,
 };
 
+static void sensor_timer_handler(struct k_timer *dummy);
+
 static uint16_t sensor_reading_time = CONFIG_APP_DEFAULT_SENSOR_READING_TIME;
 static uint8_t send_flags = 0;
+static K_SEM_DEFINE(send_message_sem, 1, 2);
+static K_TIMER_DEFINE(sensor_timer, sensor_timer_handler, NULL);
+
+static void sensor_timer_handler(struct k_timer *dummy)
+{
+	k_sem_give(&send_message_sem);
+}
+
+void lora_message_added(void)
+{
+	k_sem_give(&send_message_sem);
+}
 
 int main(void)
 {
@@ -131,6 +146,10 @@ int main(void)
 	led_off(LED_BLUE);
 
 	while (1) {
+		uint8_t i = 0;
+		uint8_t l;
+
+		k_sem_take(&send_message_sem, K_FOREVER);
 		(void)hfclk_enable();
 
 		if (lora_joined == false) {
@@ -181,6 +200,35 @@ int main(void)
 			} else {
 				LOG_ERR("Message failed to send: %d", rc);
 				++failed_messages;
+			}
+		}
+
+		/* Check for any error mesages to report */
+		l = error_message_get_count();
+
+		if (l > 0) {
+			const struct error_message_holder_t *errors = error_message_get_array();
+
+			error_message_lock();
+
+			while (i < l) {
+				rc = lora_send_message((errors[i].data_size == 0 ? NULL :
+							errors[i].data), errors[i].data_size,
+						       false, SEND_ATTEMPTS);
+
+				++i;
+			}
+
+			error_message_clear();
+			error_message_unlock();
+
+			/* Ensure that there is a pending timer event or semaphore count so this
+			 * runs again
+			 */
+			if (k_timer_remaining_get(&sensor_timer) == 0 &&
+			    k_sem_count_get(&send_message_sem) == 0) {
+				/* Something has been missed, restart the timer */
+				goto restart_timer;
 			}
 		}
 
@@ -263,7 +311,8 @@ wait:
 			lora_sent_join_message = false;
 		}
 
-		k_sleep(K_SECONDS(sensor_reading_time));
+restart_timer:
+		k_timer_start(&sensor_timer, K_SECONDS(sensor_reading_time), K_NO_WAIT);
 	}
 }
 
@@ -337,7 +386,6 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 {
 	uint8_t response[2];
 	uint8_t response_size = 0;
-	int rc;
 
 	if (port == 1) {
 		if (len == 0) {
@@ -383,17 +431,9 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 				response[response_size++] = LORA_UPLINK_TYPE_ERROR_NO_HANDLER;
 				response[response_size++] = data[0];
 
-				(void)hfclk_enable();
-
-				rc = lora_send_message(response, sizeof(response), false, SEND_ATTEMPTS);
-
-				if (rc == 0) {
-					LOG_INF("Message sent");
-				} else {
-					LOG_ERR("Message failed to send: %d", rc);
-				}
-
-				(void)hfclk_disable();
+				error_message_lock();
+				error_message_add_error(response, response_size);
+				error_message_unlock();
 			}
 		};
 	}

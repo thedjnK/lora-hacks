@@ -153,7 +153,7 @@ int lora_setup(void)
 	return 0;
 }
 
-int lora_send_message(uint8_t *data, uint16_t length, bool force_confirmed, uint8_t attempts)
+int lora_send_message(const uint8_t *data, uint16_t length, bool force_confirmed, uint8_t attempts)
 {
 	int rc = 0;
 	bool confirmed = false;
@@ -169,7 +169,7 @@ int lora_send_message(uint8_t *data, uint16_t length, bool force_confirmed, uint
 			confirmed = true;
 		}
 
-		rc = lorawan_send(1, data, length, (confirmed == true ? LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
+		rc = lorawan_send(1, (uint8_t *)data, length, (confirmed == true ? LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
 
 		if (rc < 0) {
 			--attempts;
