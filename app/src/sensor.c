@@ -72,8 +72,10 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 
 	if (temp.val1 < 0) {
 		temp.val1 = 0;
+		temp.val2 = 0;
 	} else if (temp.val1 > 100) {
 		temp.val1 = 100;
+		temp.val2 = 0;
 	}
 
 	humidity[0] = temp.val1;
