@@ -41,7 +41,7 @@ enum lora_uplink_types {
 
 enum lora_downlink_types {
 	LORA_DOWNLINK_TYPE_IR,
-	LORA_DOWNLINK_TYPE_SETTING,
+	LORA_DOWNLINK_TYPE_UNUSED,
 	LORA_DOWNLINK_TYPE_GARAGE,
 	LORA_DOWNLINK_TYPE_BLUETOOTH,
 	LORA_DOWNLINK_TYPE_DEVICE,
@@ -353,12 +353,6 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 				break;
 			}
 #endif
-
-			case LORA_DOWNLINK_TYPE_SETTING:
-			{
-				setting_lora(data[1], &data[2], (len - 2));
-				break;
-			}
 
 #ifdef CONFIG_APP_GARAGE_DOOR
 			case LORA_DOWNLINK_TYPE_GARAGE:
