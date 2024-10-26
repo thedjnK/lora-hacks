@@ -1,3 +1,8 @@
+#
+# Copyright (c) 2024, Jamie M.
+#
+# All right reserved. This code is NOT apache or FOSS/copyleft licensed.
+
 cmake_minimum_required(VERSION 3.20.0)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
@@ -10,3 +15,4 @@ target_sources_ifdef(CONFIG_ADC app PRIVATE src/adc.c)
 target_sources_ifdef(CONFIG_APP_IR_LED app PRIVATE src/ir_led.c)
 target_sources_ifdef(CONFIG_APP_GARAGE_DOOR app PRIVATE src/garage.c)
 target_sources_ifdef(CONFIG_APP_WATCHDOG app PRIVATE src/watchdog.c)
+target_sources_ifdef(CONFIG_MCUMGR_TRANSPORT_LORAWAN app PRIVATE src/smp_lorawan.c)

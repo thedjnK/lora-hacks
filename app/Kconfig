@@ -252,6 +252,8 @@ source "subsys/logging/Kconfig.template.log_config"
 
 endif # APP_WATCHDOG
 
+rsource "Kconfig.lorawan"
+
 endmenu
 
 source "Kconfig.zephyr"
