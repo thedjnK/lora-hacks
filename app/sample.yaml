@@ -1,6 +1,7 @@
 sample:
   name: lora-hacks
 common:
+  sysbuild: true
   platform_allow:
     - rs1xx
   integration_platforms:
@@ -44,6 +45,16 @@ tests:
     extra_args:
       - EXTRA_CONF_FILE="bluetooth.conf;garage.conf;mcumgr.conf"
       - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;garage.overlay"
+  lora-hacks.si7021.bluetooth.external.ir_led.fota:
+    extra_args:
+      - EXTRA_CONF_FILE="bluetooth.conf;external_dcdc.conf;ir_led.conf;mcumgr.conf;fota.conf"
+      - EXTRA_DTC_OVERLAY_FILE="ir_led.overlay"
+      - FILE_SUFFIX=fota
+  lora-hacks.bme680.bluetooth.external.ir_led.fota:
+    extra_args:
+      - EXTRA_CONF_FILE="bluetooth.conf;external_dcdc.conf;ir_led.conf;mcumgr.conf;fota.conf"
+      - EXTRA_DTC_OVERLAY_FILE="bme680.overlay;ir_led.overlay"
+      - FILE_SUFFIX=fota
   lora-hacks.bme680.bluetooth.garage.fota:
     extra_args:
       - EXTRA_CONF_FILE="bluetooth.conf;garage.conf;mcumgr.conf;fota.conf"
