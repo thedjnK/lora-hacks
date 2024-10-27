@@ -30,7 +30,7 @@ static const struct gpio_dt_spec button = BUTTON_DEVICE;
 static const struct gpio_dt_spec door = DOOR_DEVICE;
 
 /* Door thread config */
-#define DOOR_THREAD_STACK_SIZE 384
+#define DOOR_THREAD_STACK_SIZE 300
 #define DOOR_THREAD_PRIORITY 1
 #define DOOR_ACTIVE_TIME_MS 350
 
