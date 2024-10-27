@@ -200,44 +200,34 @@ static int smp_lorawan_uplink(struct net_buf *nb)
 	uint16_t pos = 0;
 
 	while (pos < nb->len) {
-		uint16_t size = 0;
+		uint8_t *data = NULL;
+		uint8_t data_size;
+		uint8_t temp;
+		uint8_t tries = 3;
 
-		while (pos < size || size == 0) {
-			uint8_t *data = NULL;
-			uint8_t data_size;
-			uint8_t temp;
-			uint8_t tries = 3;
+		lorawan_get_payload_sizes(&data_size, &temp);
 
-			lorawan_get_payload_sizes(&data_size, &temp);
+		if ((pos + data_size) > nb->len) {
+			data_size = (nb->len - pos);
+		}
 
-			if (data_size > size) {
-				data_size = size;
-			}
+		data = net_buf_pull_mem(nb, data_size);
 
-			if (size > 0) {
-				data = net_buf_pull_mem(nb, data_size);
-			}
+		while (tries > 0) {
+			int rc;
 
-			while (tries > 0) {
-				int rc;
+			rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORAWAN_PORT, data, data_size,
+					  (CONFIG_MCUMGR_TRANSPORT_LORAWAN_CONFIRMED_PACKETS ?
+					   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
 
-				rc = lorawan_send(CONFIG_MCUMGR_TRANSPORT_LORAWAN_PORT, data, data_size,
-						  (CONFIG_MCUMGR_TRANSPORT_LORAWAN_CONFIRMED_PACKETS ?
-						   LORAWAN_MSG_CONFIRMED : LORAWAN_MSG_UNCONFIRMED));
-
-				if (rc != 0) {
-					--tries;
-				} else {
-					break;
-				}
-			}
-
-			if (size == 0) {
+			if (rc != 0) {
+				--tries;
+			} else {
 				break;
 			}
-
-			pos += data_size;
 		}
+
+		pos += data_size;
 	}
 #else
 	uint8_t data_size;
