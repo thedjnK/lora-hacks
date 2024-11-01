@@ -70,10 +70,13 @@ int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 		return rc;
 	}
 
-	if (temp.val1 < 0) {
+	if (temp.val1 <= 0) {
 		temp.val1 = 0;
-		temp.val2 = 0;
-	} else if (temp.val1 > 100) {
+
+		if (temp.val2 < 0) {
+			temp.val2 = 0;
+		}
+	} else if (temp.val1 >= 100) {
 		temp.val1 = 100;
 		temp.val2 = 0;
 	}
