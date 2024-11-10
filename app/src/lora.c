@@ -24,6 +24,8 @@
 
 LOG_MODULE_REGISTER(lora, CONFIG_APP_LORA_LOG_LEVEL);
 
+static bool lora_setup_complete = false;
+
 #if CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER > 0
 static uint8_t unconfirmed_packets = CONFIG_APP_LORA_CONFIRMED_PACKET_AFTER;
 #endif
@@ -99,16 +101,19 @@ int lora_setup(void)
 		return -ENOENT;
 	}
 
-	rc = lorawan_start();
+	if (!lora_setup_complete) {
+		rc = lorawan_start();
 
-	if (rc < 0) {
-		LOG_ERR("LoRa failed to start: %d", rc);
-		return rc;
-	}
+		if (rc < 0) {
+			LOG_ERR("LoRa failed to start: %d", rc);
+			return rc;
+		}
 
 #ifdef CONFIG_APP_LORA_ALLOW_DOWNLINKS
-	lorawan_register_downlink_callback(&downlink_cb);
+		lorawan_register_downlink_callback(&downlink_cb);
 #endif
+		lora_setup_complete = true;
+	}
 
 	while (join_attempts < LORA_JOIN_ATTEMPTS) {
 		rc = lorawan_join(&join_cfg);
