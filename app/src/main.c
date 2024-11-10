@@ -38,6 +38,8 @@ enum lora_uplink_types {
 	LORA_UPLINK_TYPE_ERROR_ADC,
 	LORA_UPLINK_TYPE_ERROR_NO_HANDLER,
 	LORA_UPLINK_TYPE_UPTIME,
+	LORA_UPLINK_TYPE_IR_COMPLETE,
+	LORA_UPLINK_TYPE_GARAGE_COMPLETE,
 };
 
 enum lora_downlink_types {
@@ -218,6 +220,16 @@ int main(void)
 				rc = lora_send_message((errors[i].data_size == 0 ? NULL :
 							errors[i].data), errors[i].data_size,
 						       false, SEND_ATTEMPTS);
+
+				if (rc == 0) {
+#ifdef CONFIG_APP_WATCHDOG
+					watchdog_feed();
+#endif
+					LOG_INF("Message sent");
+				} else {
+					LOG_ERR("Message failed to send: %d", rc);
+					++failed_messages;
+				}
 
 				++i;
 			}
@@ -400,6 +412,12 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 			case LORA_DOWNLINK_TYPE_IR:
 			{
 				(void)ir_led_send(data[1]);
+
+				/* Send response indicating request has been actioned */
+				response[response_size++] = LORA_UPLINK_TYPE_IR_COMPLETE;
+				error_message_lock();
+				error_message_add_error(response, response_size);
+				error_message_unlock();
 				break;
 			}
 #endif
@@ -408,6 +426,12 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 			case LORA_DOWNLINK_TYPE_GARAGE:
 			{
 				garage_door_open_close();
+
+				/* Send response indicating request has been actioned */
+				response[response_size++] = LORA_UPLINK_TYPE_GARAGE_COMPLETE;
+				error_message_lock();
+				error_message_add_error(response, response_size);
+				error_message_unlock();
 				break;
 			}
 #endif
