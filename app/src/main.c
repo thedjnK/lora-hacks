@@ -156,6 +156,9 @@ int main(void)
 			rc = lora_setup();
 
 			if (rc == 0) {
+#ifdef CONFIG_APP_WATCHDOG
+				watchdog_feed();
+#endif
 				lora_joined = true;
 			} else {
 				goto wait;
@@ -289,6 +292,9 @@ int main(void)
 		rc = lora_send_message(lora_data, data_size, false, SEND_ATTEMPTS);
 
 		if (rc == 0) {
+#ifdef CONFIG_APP_WATCHDOG
+			watchdog_feed();
+#endif
 			LOG_INF("Message sent");
 		} else {
 			LOG_ERR("Message failed to send: %d", rc);
@@ -297,10 +303,6 @@ int main(void)
 
 wait:
 		(void)hfclk_disable();
-
-#ifdef CONFIG_APP_WATCHDOG
-		watchdog_feed();
-#endif
 
 		if (failed_messages > CONFIG_APP_LORA_RECONNECT_FAILED_PACKETS) {
 			/* No successful messages after a period of time, consider connection dead
