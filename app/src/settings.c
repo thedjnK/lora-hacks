@@ -29,6 +29,10 @@ static uint8_t bluetooth_fixed_passkey[BLUETOOTH_FIXED_PASSKEY_SIZE];
 #endif
 #endif
 
+#if defined(CONFIG_APP_EXTERNAL_DCDC) || defined(CONFIG_BT)
+#define HAS_APP_SETTINGS 1
+#endif
+
 static int lora_keys_handle_set(const char *name, size_t len, settings_read_cb read_cb,
 				void *cb_arg)
 {
@@ -140,6 +144,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(lora_keys, "lora_keys", lora_keys_handle_get, lor
 
 /* Application settings */
 
+#if defined(HAS_APP_SETTINGS)
 static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb,
 				void *cb_arg)
 {
@@ -185,7 +190,9 @@ static int app_handle_set(const char *name, size_t len, settings_read_cb read_cb
 			return -EINVAL;
 		}
 
+#ifdef CONFIG_BT
 save:
+#endif
 		rc = read_cb(cb_arg, output, output_size);
 
 		if (rc < 0) {
@@ -280,3 +287,12 @@ void app_keys_clear(void)
 
 SETTINGS_STATIC_HANDLER_DEFINE(app, "app", app_handle_get, app_handle_set,
 			       app_handle_commit, app_handle_export);
+#else
+void app_keys_load(void)
+{
+}
+
+void app_keys_clear(void)
+{
+}
+#endif
