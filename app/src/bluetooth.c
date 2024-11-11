@@ -31,13 +31,13 @@ static const struct gpio_dt_spec button = BUTTON_DEVICE;
 
 static void stop_advertising_function(struct k_timer *timer_id);
 static bool continue_advert = false;
+static struct k_work stop_advertising_work;
 
 K_TIMER_DEFINE(stop_advertising_timer, stop_advertising_function, NULL);
 #endif
 
 static bool in_connection = false;
 static struct k_work advertise_work;
-static struct k_work stop_advertising_work;
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -69,6 +69,9 @@ struct bond_check_data_t {
 	const bt_addr_le_t *addr;
 	bool found;
 };
+
+/* Used to prevent connection encrypted callback running multiple times */
+static bool connection_security_updated = false;
 #else
 /* Advertising interval minimum/maximum in 0.625us units, 0.2-0.4 seconds */
 #define BT_ADV_INTERVAL_MIN 320
@@ -210,6 +213,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	in_connection = false;
+	connection_security_updated = false;
 	active_conn = NULL;
 	do_advert();
 }
@@ -231,8 +235,9 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 	if (!err) {
 		LOG_DBG("Security changed to %d: for %s", level, addr);
 
-		if (level == BT_SECURITY_L4) {
+		if (level == BT_SECURITY_L4 && connection_security_updated == false) {
 			bluetooth_security_changed();
+			connection_security_updated = true;
 		}
 	} else {
 		LOG_ERR("Security failed: %s level %u err %d", addr, level, err);
