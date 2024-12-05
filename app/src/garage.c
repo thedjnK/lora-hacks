@@ -32,7 +32,7 @@ static const struct gpio_dt_spec door = DOOR_DEVICE;
 /* Door thread config */
 #define DOOR_THREAD_STACK_SIZE 300
 #define DOOR_THREAD_PRIORITY 1
-#define DOOR_ACTIVE_TIME_MS 350
+#define DOOR_ACTIVE_TIME_MS 200
 
 K_THREAD_STACK_DEFINE(door_thread_stack, DOOR_THREAD_STACK_SIZE);
 static k_tid_t door_thread_id;
