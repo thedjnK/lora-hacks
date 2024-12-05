@@ -20,6 +20,12 @@ LOG_MODULE_REGISTER(bluetooth, CONFIG_APP_BLUETOOTH_LOG_LEVEL);
 
 #define BUTTON_ALIAS DT_ALIAS(sw0)
 
+#ifdef CONFIG_APP_BT_MODE_ALWAYS_ADVERTISE
+static bool continue_advert = true;
+#else
+static bool continue_advert = false;
+#endif
+
 #ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 #if DT_NODE_HAS_STATUS(BUTTON_ALIAS, okay)
 #define BUTTON_DEVICE GPIO_DT_SPEC_GET(BUTTON_ALIAS, gpios)
@@ -30,7 +36,6 @@ static const struct gpio_dt_spec button = BUTTON_DEVICE;
 #endif
 
 static void stop_advertising_function(struct k_timer *timer_id);
-static bool continue_advert = false;
 static struct k_work stop_advertising_work;
 
 K_TIMER_DEFINE(stop_advertising_timer, stop_advertising_function, NULL);
@@ -97,15 +102,16 @@ static void stop_advertising_function(struct k_timer *timer_id)
 
 static void do_advert(void)
 {
-#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 	if (continue_advert == true) {
+#ifdef CONFIG_APP_BT_MODE_ADVERTISE_ON_DEMAND
 		k_work_submit(&advertise_work);
 	} else {
 		led_off(LED_BLUE);
 	}
 #else
-	k_work_submit(&advertise_work);
+		k_work_submit(&advertise_work);
 #endif
+	}
 }
 
 static void advertise(struct k_work *work)
@@ -521,3 +527,20 @@ BT_GATT_SERVICE_DEFINE(ess_svc,
 			       NULL, &gatt_value),
 );
 #endif
+
+void bluetooth_advertising_start(void)
+{
+	continue_advert = true;
+	do_advert();
+}
+
+void bluetooth_advertising_stop(void)
+{
+	continue_advert = false;
+
+	if (in_connection == true) {
+		bt_conn_disconnect(active_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	} else {
+		bt_le_adv_stop();
+	}
+}

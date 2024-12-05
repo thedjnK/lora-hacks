@@ -36,4 +36,10 @@ void bluetooth_clear_bonds(void);
 /* Remote LoRa function for bluetooth */
 int bluetooth_remote(enum bluetooth_remote_op_t op);
 
+/* Starts advertising */
+void bluetooth_advertising_start(void);
+
+/* Stops advertising and closes open connections */
+void bluetooth_advertising_stop(void);
+
 #endif /* APP_BLUETOTH_H */
