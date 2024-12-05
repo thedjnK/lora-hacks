@@ -205,8 +205,13 @@ static void connected(struct bt_conn *conn, uint8_t err)
 			};
 
 			bt_foreach_bond(BT_ID_DEFAULT, bond_check_loop, &bond_check_data);
-		}
 
+			if (bond_check_data.found == false)
+			{
+				bt_conn_disconnect(conn, BT_HCI_ERR_AUTH_FAIL);
+				return;
+			}
+		}
 
 		if (bt_conn_set_security(conn, BT_SECURITY_L4)) {
 			LOG_ERR("Failed to set security level");
