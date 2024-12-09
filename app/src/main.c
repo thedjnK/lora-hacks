@@ -31,6 +31,8 @@ LOG_MODULE_REGISTER(app, CONFIG_APP_LOG_LEVEL);
 #define SEND_ATTEMPTS 3
 #define ADC_OFFSET_DEFAULT_MV 500
 
+extern void sys_arch_reboot(int type);
+
 enum lora_uplink_types {
 	LORA_UPLINK_TYPE_STARTUP,
 	LORA_UPLINK_TYPE_READINGS,
@@ -465,3 +467,15 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 	}
 }
 #endif
+
+void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
+{
+	/* In system fault handler, reboot calling arch function directly */
+	sys_arch_reboot(SYS_REBOOT_WARM);
+}
+
+void bt_ctlr_assert_handle(char *, int)
+{
+	/* In Bluetooth fault handler, reboot calling arch function directly */
+	sys_arch_reboot(SYS_REBOOT_WARM);
+}
