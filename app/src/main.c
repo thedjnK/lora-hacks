@@ -154,10 +154,6 @@ int main(void)
 		k_sem_take(&send_message_sem, K_FOREVER);
 		(void)hfclk_enable();
 
-#ifdef CONFIG_APP_BT_MODE_ALWAYS_ADVERTISE
-		bluetooth_advertising_stop();
-#endif
-
 		if (lora_joined == false) {
 			rc = lora_setup();
 
@@ -330,10 +326,6 @@ wait:
 		}
 
 restart_timer:
-#ifdef CONFIG_APP_BT_MODE_ALWAYS_ADVERTISE
-		bluetooth_advertising_start();
-#endif
-
 		k_timer_start(&sensor_timer, K_SECONDS(sensor_reading_time), K_NO_WAIT);
 	}
 }
