@@ -18,7 +18,7 @@
 #define LORA_JOIN_FAIL_DELAY K_SECONDS(30)
 #define LORA_SEND_FAIL_DELAY K_SECONDS(5)
 
-#define LORA_JOIN_ATTEMPTS 64
+#define LORA_JOIN_ATTEMPTS 24
 
 #define LORA_DEVICE DEVICE_DT_GET(DT_ALIAS(lora0))
 
@@ -75,7 +75,7 @@ int lora_setup(void)
 
 	if (rc != sizeof(dev_eui)) {
 		LOG_ERR("Invalid setting get dev eui response: %d", rc);
-		return rc;
+		return (rc < 0 ? rc : -EINVAL);
 	} else if (memcmp(dev_eui, empty_check, sizeof(dev_eui)) == 0) {
 		LOG_ERR("Key not set: dev eui, cannot start LoRa");
 		return -ENOENT;
@@ -85,7 +85,7 @@ int lora_setup(void)
 
 	if (rc != sizeof(join_eui)) {
 		LOG_ERR("Invalid setting get dev eui response: %d", rc);
-		return rc;
+		return (rc < 0 ? rc : -EINVAL);
 	} else if (memcmp(join_eui, empty_check, sizeof(join_eui)) == 0) {
 		LOG_ERR("Key not set: join eui, cannot start LoRa");
 		return -ENOENT;
@@ -95,7 +95,7 @@ int lora_setup(void)
 
 	if (rc != sizeof(app_key)) {
 		LOG_ERR("Invalid setting get dev eui response: %d", rc);
-		return rc;
+		return (rc < 0 ? rc : -EINVAL);
 	} else if (memcmp(app_key, empty_check, sizeof(app_key)) == 0) {
 		LOG_ERR("Key not set: app key, cannot start LoRa");
 		return -ENOENT;
@@ -155,7 +155,7 @@ int lora_setup(void)
 	lorawan_enable_adr(true);
 #endif
 
-	return 0;
+	return (rc >= 0 ? 0 : rc);
 }
 
 int lora_send_message(const uint8_t *data, uint16_t length, bool force_confirmed, uint8_t attempts)
