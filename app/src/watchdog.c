@@ -11,9 +11,9 @@
 
 LOG_MODULE_REGISTER(watchdog, CONFIG_APP_WATCHDOG_LOG_LEVEL);
 
-/* Watchdog config, 10 minute timeout */
+/* Watchdog config, 7 minute timeout */
 #define WDT_MIN_WINDOW  0U
-#define WDT_MAX_WINDOW  600000U
+#define WDT_MAX_WINDOW  420000U
 
 static bool watchdog_feed_allowed;
 static int wdt_channel_id;
@@ -25,7 +25,6 @@ int watchdog_init(void)
 
 	if (!device_is_ready(wdt)) {
 		LOG_ERR("Watchdog device not ready");
-
 		return -ENODEV;
 	}
 
@@ -36,13 +35,13 @@ int watchdog_init(void)
 		/* Expire watchdog after max window */
 		.window.min = WDT_MIN_WINDOW,
 		.window.max = WDT_MAX_WINDOW,
+		.callback = NULL,
 	};
 
 	wdt_channel_id = wdt_install_timeout(wdt, &wdt_config);
 
 	if (wdt_channel_id < 0) {
 		LOG_ERR("Watchdog install error: %d", wdt_channel_id);
-
 		return -ENODEV;
 	}
 
