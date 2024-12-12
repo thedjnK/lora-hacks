@@ -160,9 +160,6 @@ int main(void)
 			rc = lora_setup();
 
 			if (rc == 0) {
-#ifdef CONFIG_APP_WATCHDOG
-				watchdog_feed();
-#endif
 				lora_joined = true;
 			} else {
 				goto wait;
@@ -325,6 +322,8 @@ wait:
 			failed_messages = 0;
 			lora_joined = false;
 			lora_sent_join_message = false;
+			watchdog_fatal();
+			sys_arch_reboot(SYS_REBOOT_COLD);
 		}
 
 restart_timer:
@@ -471,11 +470,13 @@ void lora_message_callback(uint8_t port, const uint8_t *data, uint8_t len)
 void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
 {
 	/* In system fault handler, reboot calling arch function directly */
-	sys_arch_reboot(SYS_REBOOT_WARM);
+	watchdog_fatal();
+	sys_arch_reboot(SYS_REBOOT_COLD);
 }
 
 void bt_ctlr_assert_handle(char *, int)
 {
 	/* In Bluetooth fault handler, reboot calling arch function directly */
-	sys_arch_reboot(SYS_REBOOT_WARM);
+	watchdog_fatal();
+	sys_arch_reboot(SYS_REBOOT_COLD);
 }
