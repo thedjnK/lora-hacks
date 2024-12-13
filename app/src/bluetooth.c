@@ -218,7 +218,9 @@ static void connected(struct bt_conn *conn, uint8_t err)
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	in_connection = false;
+#if defined(CONFIG_BT_SMP)
 	connection_security_updated = false;
+#endif
 	active_conn = NULL;
 	do_advert();
 }
