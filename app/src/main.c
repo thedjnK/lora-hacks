@@ -94,6 +94,7 @@ int main(void)
 	uint8_t failed_messages = 0;
 	bool lora_joined = false;
 	bool lora_sent_join_message = false;
+	bool error = false;
 
 #ifdef CONFIG_ADC
 	uint16_t voltage;
@@ -114,6 +115,7 @@ int main(void)
 	rc = bluetooth_init();
 
 	if (rc != 0) {
+		error = true;
 		LOG_ERR("Bluetooth setup failed");
 	}
 #endif
@@ -125,29 +127,48 @@ int main(void)
 #endif
 
 	if (rc != 0) {
-		LOG_ERR("Sensor setup failed: cannot continue");
-		return 0;
+		error = true;
+		LOG_ERR("Sensor setup failed: device inoperable");
 	}
 
 #ifdef CONFIG_APP_IR_LED
 	rc = ir_led_setup();
 
 	if (rc != 0) {
-		LOG_ERR("IR LED setup failed: cannot continue");
-		return 0;
+		error = true;
+		LOG_ERR("IR LED setup failed: device inoperable");
 	}
 #endif
 
 	/* LED flashing to indicate start up */
-	led_on(LED_RED);
-	k_sleep(K_MSEC(300));
-	led_off(LED_RED);
-	led_on(LED_GREEN);
-	k_sleep(K_MSEC(300));
-	led_off(LED_GREEN);
-	led_on(LED_BLUE);
-	k_sleep(K_MSEC(300));
-	led_off(LED_BLUE);
+	if (error == false) {
+		led_on(LED_RED);
+		k_sleep(K_MSEC(300));
+		led_off(LED_RED);
+		led_on(LED_GREEN);
+		k_sleep(K_MSEC(300));
+		led_off(LED_GREEN);
+		led_on(LED_BLUE);
+		k_sleep(K_MSEC(300));
+		led_off(LED_BLUE);
+	} else {
+		watchdog_fatal();
+		led_on(LED_RED);
+		led_on(LED_GREEN);
+		k_sleep(K_MSEC(300));
+		led_off(LED_RED);
+		led_off(LED_GREEN);
+		led_on(LED_GREEN);
+		led_on(LED_BLUE);
+		k_sleep(K_MSEC(300));
+		led_off(LED_GREEN);
+		led_off(LED_BLUE);
+		led_on(LED_BLUE);
+		led_on(LED_RED);
+		k_sleep(K_MSEC(300));
+		led_off(LED_BLUE);
+		led_off(LED_RED);
+	}
 
 	while (1) {
 		uint8_t i = 0;
@@ -373,6 +394,7 @@ static int device_command(const enum device_command_op_t op, const uint8_t *data
 		case DEVICE_COMMAND_OP_GET_UPTIME:
 		{
 			send_flags |= SEND_FLAG_UPTIME;
+			k_sem_give(&send_message_sem);
 			break;
 		}
 		case DEVICE_COMMAND_OP_SET_SENSOR_INTEVAL:
