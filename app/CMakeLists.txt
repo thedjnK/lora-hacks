@@ -16,3 +16,25 @@ target_sources_ifdef(CONFIG_APP_IR_LED app PRIVATE src/ir_led.c)
 target_sources_ifdef(CONFIG_APP_GARAGE_DOOR app PRIVATE src/garage.c)
 target_sources_ifdef(CONFIG_APP_WATCHDOG app PRIVATE src/watchdog.c)
 target_sources_ifdef(CONFIG_MCUMGR_TRANSPORT_LORAWAN app PRIVATE src/smp_lorawan.c)
+
+set(ZEPHYR_CURRENT_LIBRARY loramac-node)
+
+zephyr_library_sources(src/soft-se.c)
+
+zephyr_library_include_directories(
+  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se
+  ${ZEPHYR_TINYCRYPT_MODULE_DIR}/lib/include
+)
+
+zephyr_library_compile_definitions(
+  USE_LRWAN_1_0_X_CRYPTO
+)
+
+set_source_files_properties(
+  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
+  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
+  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se.c
+  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/mac/LoRaMacClassB.c
+  DIRECTORY ${ZEPHYR_BASE}/subsys/lorawan/
+  PROPERTIES HEADER_FILE_ONLY ON
+)

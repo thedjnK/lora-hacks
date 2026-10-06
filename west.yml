@@ -13,7 +13,6 @@ manifest:
         name-allowlist:
           - cmsis
           - hal_nordic
-          - loramac-node
           - mcuboot
           - picolibc
           - tinycrypt
@@ -21,6 +20,10 @@ manifest:
     - name: boards
       remote: thedjnK
       revision: main
+    - name: loramac-node
+      path: modules/lib/loramac-node/
+      remote: thedjnK
+      revision: lora-hacks-ng
 
   self:
     path: lora-hacks
