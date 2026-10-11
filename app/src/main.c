@@ -142,6 +142,7 @@ int main(void)
 
 	/* LED flashing to indicate start up */
 	if (error == false) {
+#if defined(CONFIG_APP_LEDS)
 		led_on(LED_RED);
 		k_sleep(K_MSEC(300));
 		led_off(LED_RED);
@@ -151,8 +152,12 @@ int main(void)
 		led_on(LED_BLUE);
 		k_sleep(K_MSEC(300));
 		led_off(LED_BLUE);
+#else
+		k_sleep(K_MSEC(300));
+#endif
 	} else {
 		watchdog_fatal();
+#if defined(CONFIG_APP_LEDS)
 		led_on(LED_RED);
 		led_on(LED_GREEN);
 		k_sleep(K_MSEC(300));
@@ -168,6 +173,9 @@ int main(void)
 		k_sleep(K_MSEC(300));
 		led_off(LED_BLUE);
 		led_off(LED_RED);
+#else
+		k_sleep(K_MSEC(300));
+#endif
 	}
 
 	while (1) {
@@ -256,6 +264,7 @@ int main(void)
 
 			error_message_clear();
 			error_message_unlock();
+			(void)hfclk_disable();
 
 			/* Ensure that there is a pending timer event or semaphore count so this
 			 * runs again
@@ -264,91 +273,92 @@ int main(void)
 			    k_sem_count_get(&send_message_sem) == 0) {
 				/* Something has been missed, restart the timer */
 				goto restart_timer;
+			} else {
+				continue;
 			}
-		}
+		} else {
+			data_size = 0;
 
-		data_size = 0;
-
-		rc = sensor_fetch_readings(temperature, humidity);
-
-		if (rc != 0) {
-			lora_data[data_size++] = LORA_UPLINK_TYPE_ERROR_READINGS;
-		}
-
-#ifdef CONFIG_ADC
-		if (rc == 0) {
-			rc = adc_read_internal(&voltage);
+			rc = sensor_fetch_readings(temperature, humidity);
 
 			if (rc != 0) {
-				lora_data[data_size++] = LORA_UPLINK_TYPE_ERROR_ADC;
-			} else {
-#ifdef CONFIG_APP_EXTERNAL_DCDC
-				int16_t adc_offset;
-
-				rc = settings_runtime_get("app/power_offset", (uint8_t *)&adc_offset, sizeof(adc_offset));
-
-				if (rc != sizeof(adc_offset) || adc_offset == 0) {
-					/* No offset, use default */
-					adc_offset = ADC_OFFSET_DEFAULT_MV;
-				}
-
-				voltage += adc_offset;
-
-				rc = 0;
-#endif
+				lora_data[data_size++] = LORA_UPLINK_TYPE_ERROR_READINGS;
 			}
-		}
-#endif
-
-		if (rc == 0) {
-			lora_data[data_size++] = LORA_UPLINK_TYPE_READINGS;
-			lora_data[data_size++] = temperature[0];
-			lora_data[data_size++] = temperature[1];
-			lora_data[data_size++] = humidity[0];
-			lora_data[data_size++] = humidity[1];
 
 #ifdef CONFIG_ADC
-			lora_data[data_size++] = (voltage & 0xff00) >> 8;
-			lora_data[data_size++] = voltage & 0xff;
+			if (rc == 0) {
+				rc = adc_read_internal(&voltage);
+
+				if (rc != 0) {
+					lora_data[data_size++] = LORA_UPLINK_TYPE_ERROR_ADC;
+				} else {
+#ifdef CONFIG_APP_EXTERNAL_DCDC
+					int16_t adc_offset;
+
+					rc = settings_runtime_get("app/power_offset", (uint8_t *)&adc_offset, sizeof(adc_offset));
+
+					if (rc != sizeof(adc_offset) || adc_offset == 0) {
+						/* No offset, use default */
+						adc_offset = ADC_OFFSET_DEFAULT_MV;
+					}
+
+					voltage += adc_offset;
+
+					rc = 0;
+#endif
+				}
+			}
+#endif
+
+			if (rc == 0) {
+				lora_data[data_size++] = LORA_UPLINK_TYPE_READINGS;
+				lora_data[data_size++] = temperature[0];
+				lora_data[data_size++] = temperature[1];
+				lora_data[data_size++] = humidity[0];
+				lora_data[data_size++] = humidity[1];
+
+#ifdef CONFIG_ADC
+				lora_data[data_size++] = (voltage & 0xff00) >> 8;
+				lora_data[data_size++] = voltage & 0xff;
 #else
-			lora_data[data_size++] = 0xff;
-			lora_data[data_size++] = 0xff;
+				lora_data[data_size++] = 0xff;
+				lora_data[data_size++] = 0xff;
 #endif
-		} else {
-			LOG_ERR("Failed to fetch sensor readings or ADC value");
+			} else {
+				LOG_ERR("Failed to fetch sensor readings or ADC value");
 
-			/* Uplink type is already set, append error code */
-			lora_data[data_size++] = rc & 0xff;
-		}
+				/* Uplink type is already set, append error code */
+				lora_data[data_size++] = rc & 0xff;
+			}
 
-		rc = lora_send_message(lora_data, data_size, false, SEND_ATTEMPTS);
+			rc = lora_send_message(lora_data, data_size, false, SEND_ATTEMPTS);
 
-		if (rc == 0) {
+			if (rc == 0) {
 #ifdef CONFIG_APP_WATCHDOG
-			watchdog_feed();
+				watchdog_feed();
 #endif
-			LOG_INF("Message sent");
-		} else {
-			LOG_ERR("Message failed to send: %d", rc);
-			++failed_messages;
-		}
-
+				LOG_INF("Message sent");
+			} else {
+				LOG_ERR("Message failed to send: %d", rc);
+				++failed_messages;
+			}
 wait:
-		(void)hfclk_disable();
+			(void)hfclk_disable();
 
-		if (failed_messages > CONFIG_APP_LORA_RECONNECT_FAILED_PACKETS) {
-			/* No successful messages after a period of time, consider connection dead
-			 * and reconnect
-			 */
-			failed_messages = 0;
-			lora_joined = false;
-			lora_sent_join_message = false;
-			watchdog_fatal();
-			sys_arch_reboot(SYS_REBOOT_COLD);
-		}
+			if (failed_messages > CONFIG_APP_LORA_RECONNECT_FAILED_PACKETS) {
+				/* No successful messages after a period of time, consider connection dead
+				 * and reconnect
+				 */
+				failed_messages = 0;
+				lora_joined = false;
+				lora_sent_join_message = false;
+				watchdog_fatal();
+				sys_arch_reboot(SYS_REBOOT_COLD);
+			}
 
 restart_timer:
-		k_timer_start(&sensor_timer, K_SECONDS(sensor_reading_time), K_NO_WAIT);
+			k_timer_start(&sensor_timer, K_SECONDS(sensor_reading_time), K_NO_WAIT);
+		}
 	}
 }
 
@@ -380,6 +390,7 @@ static int device_command(const enum device_command_op_t op, const uint8_t *data
 
 			break;
 		}
+#if defined(CONFIG_APP_LEDS)
 		case DEVICE_COMMAND_OP_BLINK_LED:
 		{
 			led_on(LED_RED);
@@ -391,6 +402,7 @@ static int device_command(const enum device_command_op_t op, const uint8_t *data
 			led_off(LED_BLUE);
 			break;
 		}
+#endif
 		case DEVICE_COMMAND_OP_GET_UPTIME:
 		{
 			send_flags |= SEND_FLAG_UPTIME;
