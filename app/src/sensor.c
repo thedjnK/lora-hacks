@@ -30,6 +30,36 @@ static const struct device *const sensor = DEVICE_DT_GET(SENSOR_DEV);
 static const struct device *const regulator = DEVICE_DT_GET(REGULATOR_DEV);
 #endif
 
+#if CONFIG_DT_HAS_SILABS_SI7006_ENABLED
+#include <zephyr/drivers/i2c.h>
+#include <si7006.h>
+
+//Taken from ...
+struct si7006_config {
+	struct i2c_dt_spec i2c;
+	const struct device *vin_supply;
+	/** Use "read temp" vs "read old temp" command, the latter only with SiLabs sensors. */
+	uint8_t read_temp_cmd;
+};
+
+static int si7060_reg_write(const struct device *dev, uint8_t reg, uint8_t val)
+{
+	const struct si7006_config *config = dev->config;
+
+	return i2c_reg_write_byte_dt(&config->i2c, reg, val);
+}
+
+void sensor_run_heater(void)
+{
+//	si7060_reg_write(sensor, SI7006_WRITE_HEATER_CONTR, 0x4);
+	si7060_reg_write(sensor, SI7006_WRITE_HEATER_CONTR, 0x0);
+	si7060_reg_write(sensor, SI7006_WRITE_HUMIDITY_TEMP_CONTR, 0x3e);
+//	k_sleep(K_MSEC(50));
+//	k_sleep(K_MSEC(500));
+//	si7060_reg_write(sensor, SI7006_WRITE_HUMIDITY_TEMP_CONTR, 0x3a);
+}
+#endif
+
 int sensor_fetch_readings(int8_t *temperature, int8_t *humidity)
 {
 	struct sensor_value temp;

@@ -48,7 +48,7 @@ tests:
 
   lora-hacks.si7021.bluetooth.fota:
     extra_args:
-      - EXTRA_CONF_FILE="bluetooth.conf;mcumgr.conf;fota.conf"
+      - EXTRA_CONF_FILE="bluetooth.conf;mcumgr.conf;fota.conf;picolibc_module_speed.conf"
       - FILE_SUFFIX=fota
   lora-hacks.si7021.bluetooth.external.fota:
     extra_args:

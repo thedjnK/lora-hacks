@@ -58,6 +58,7 @@ enum device_command_op_t {
 	DEVICE_COMMAND_OP_BLINK_LED,
 	DEVICE_COMMAND_OP_GET_UPTIME,
 	DEVICE_COMMAND_OP_SET_SENSOR_INTEVAL,
+	DEVICE_COMMAND_OP_SENSOR_RUN_HEATER,
 
 	DEVICE_COMMAND_OP_COUNT,
 };
@@ -422,6 +423,12 @@ static int device_command(const enum device_command_op_t op, const uint8_t *data
 			sensor_reading_time = *reading_time;
 			break;
 		}
+#if CONFIG_DT_HAS_SILABS_SI7006_ENABLED
+		case DEVICE_COMMAND_OP_SENSOR_RUN_HEATER:
+		{
+			sensor_run_heater();
+		}
+#endif
 		default:
 		{
 			return -EINVAL;

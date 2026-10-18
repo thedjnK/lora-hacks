@@ -19,7 +19,7 @@ target_sources_ifdef(CONFIG_MCUMGR_TRANSPORT_LORAWAN app PRIVATE src/smp_lorawan
 
 set(ZEPHYR_CURRENT_LIBRARY loramac-node)
 
-zephyr_library_sources(src/soft-se.c)
+#zephyr_library_sources(src/soft-se.c)
 
 zephyr_library_include_directories(
   ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se
@@ -31,10 +31,14 @@ zephyr_library_compile_definitions(
 )
 
 set_source_files_properties(
-  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
-  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
-  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se.c
+#  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/aes.c
+#  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/cmac.c
+#  ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/peripherals/soft-se/soft-se.c
   ${ZEPHYR_LORAMAC_NODE_MODULE_DIR}/src/mac/LoRaMacClassB.c
   DIRECTORY ${ZEPHYR_BASE}/subsys/lorawan/
   PROPERTIES HEADER_FILE_ONLY ON
 )
+
+if(CONFIG_DT_HAS_SILABS_SI7006_ENABLED)
+  zephyr_include_directories(${ZEPHYR_BASE}/drivers/sensor/silabs/si7006)
+endif()

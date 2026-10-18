@@ -1,0 +1,175 @@
+diff --git a/samples/hello_world/CMakeLists.txt b/samples/hello_world/CMakeLists.txt
+index ecb7d24bb8f..982a7518768 100644
+--- a/samples/hello_world/CMakeLists.txt
++++ b/samples/hello_world/CMakeLists.txt
+@@ -5,4 +5,15 @@ cmake_minimum_required(VERSION 3.20.0)
+ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+ project(hello_world)
+ 
+-target_sources(app PRIVATE src/main.c)
++target_sources(app PRIVATE src/main.c
++/tmp/cc/modules/lib/loramac-node/src/peripherals/soft-se/aes.c
++/tmp/cc/modules/lib/loramac-node/src/peripherals/soft-se/cmac.c
++/tmp/cc/zephyr/subsys/bluetooth/controller/ll_sw/nordic/hal/nrf5/ecb.c
++/tmp/cc/modules/lib/loramac-node/src/boards/mcu/utilities.c
++)
++zephyr_include_directories(
++/tmp/cc/zephyr/subsys/bluetooth/controller
++/tmp/cc/zephyr/subsys/bluetooth/controller/ll_sw/nordic/
++/tmp/cc/zephyr/subsys/bluetooth
++/tmp/cc/modules/lib/loramac-node/src/boards/
++)
+diff --git a/samples/hello_world/src/main.c b/samples/hello_world/src/main.c
+index c550ab461cb..47e08890aa1 100644
+--- a/samples/hello_world/src/main.c
++++ b/samples/hello_world/src/main.c
+@@ -5,10 +5,149 @@
+  */
+ 
+ #include <stdio.h>
++#include <zephyr/kernel.h>
++#include "/tmp/cc/modules/lib/loramac-node/src/peripherals/soft-se/aes.h"
++#include "/tmp/cc/modules/lib/loramac-node/src/peripherals/soft-se/cmac.h"
++#include <tinycrypt/cmac_mode.h>
++#include <tinycrypt/constants.h>
++#include <tinycrypt/aes.h>
++
++#define LOG_LEVEL LOG_LEVEL_DBG
++#include <zephyr/logging/log.h>
++LOG_MODULE_REGISTER(smp_sample);
++
++extern void ecb_encrypt(uint8_t const *const key_le, uint8_t const *const clear_text_le,
++                 uint8_t * const cipher_text_le, uint8_t * const cipher_text_be);
++extern void ecb_encrypt_be(uint8_t const *const key_be, uint8_t const *const clear_text_be,
++                    uint8_t * const cipher_text_be);
++
++uint8_t aes_encrypt( const uint8_t in[16], uint8_t  out[16], const aes_context ctx[1] );
++
++static uint8_t key[] = {0x01, 0x93, 0x48, 0xb0, 0x39, 0xf2, 0x49, 0x83, 0x2a, 0x29, 0x42, 0x02, 0xc4, 0x83, 0xaa, 0xd2};
++static uint8_t text[] = "test string, only testing is valid";
++
++void f1(void);
++void f2(void);
+ 
+ int main(void)
+ {
+ 	printf("Hello World! %s\n", CONFIG_BOARD_TARGET);
++f1();
++f2();
+ 
+ 	return 0;
+ }
++
++//AES CHECK
++#if 0
++void f1(void)
++{
++uint8_t output[32];
++uint32_t start, end, diff;
++    aes_context aesContext;
++start = k_uptime_get_32();
++    memset( aesContext.ksch, '\0', 240 );
++
++        aes_set_key( key, 16, &aesContext );
++
++        uint8_t block = 0;
++
++//        while( size != 0 )
++//        {
++            aes_encrypt(text, output, &aesContext);
++            aes_encrypt(&text[16], &output[16], &aesContext);
++//            block = block + 16;
++//            size  = size - 16;
++//        }
++end = k_uptime_get_32();
++diff = end - start;
++LOG_HEXDUMP_ERR(text, 32, "f1 in");
++LOG_HEXDUMP_ERR(output, 32, "f1 out");
++LOG_ERR("took %dms", diff);
++}
++
++void f2(void)
++{
++uint8_t output[32];
++uint32_t start, end, diff;
++start = k_uptime_get_32();
++ecb_encrypt_be(key, text, output);
++ecb_encrypt_be(key, &text[16], &output[16]);
++end = k_uptime_get_32();
++diff = end - start;
++
++LOG_HEXDUMP_ERR(text, 32, "f2 in");
++LOG_HEXDUMP_ERR(output, 32, "f2 out");
++LOG_ERR("took %dms", diff);
++}
++#endif
++
++uint8_t micBxBuffer[16] = {0x1a, 0x79, 0xfc, 0xf0, 0x94, 0xc5, 0x44, 0xfe, 0xf8, 0x90, 0x68, 0x19, 0xbb, 0x25, 0x1b, 0x1a};
++uint8_t buffer[16] = {0xf0, 0xc1, 0x38, 0xe0, 0xa9, 0x9e, 0xfe, 0xe4, 0xac, 0x31, 0xe4, 0x2f, 0xee, 0x1b, 0x54, 0x86};
++
++//CMAC CHECK
++void f1(void)
++{
++uint32_t start, end, diff;
++start = k_uptime_get_32();
++
++    uint8_t Cmac[16];
++    AES_CMAC_CTX aesCmacCtx[1];
++
++    AES_CMAC_Init( aesCmacCtx );
++
++        AES_CMAC_SetKey( aesCmacCtx, key);
++
++//        if( micBxBuffer != NULL )
++//        {
++            AES_CMAC_Update( aesCmacCtx, micBxBuffer, 16 );
++//        }
++
++        AES_CMAC_Update( aesCmacCtx, buffer, 16 );
++
++        AES_CMAC_Final( Cmac, aesCmacCtx );
++
++end = k_uptime_get_32();
++diff = end - start;
++LOG_HEXDUMP_ERR(Cmac, 16, "f1 out");
++LOG_ERR("took %dms", diff);
++
++        // Bring into the required format
++//        *cmac = ( uint32_t )( ( uint32_t ) Cmac[3] << 24 | ( uint32_t ) Cmac[2] << 16 | ( uint32_t ) Cmac[1] << 8 |
++//                              ( uint32_t ) Cmac[0] );
++
++}
++
++void f2(void)
++{
++uint32_t start, end, diff;
++start = k_uptime_get_32();
++
++    uint8_t Cmac[16];
++        struct tc_aes_key_sched_struct sched;
++        struct tc_cmac_struct state;
++
++        if (tc_cmac_setup(&state, key, &sched) == TC_CRYPTO_FAIL) {
++                return;
++        }
++
++//        if( micBxBuffer != NULL )
++//        {
++        if (tc_cmac_update(&state, micBxBuffer, 16) == TC_CRYPTO_FAIL) {
++                return;
++}
++//}
++
++        if (tc_cmac_update(&state, buffer, 16) == TC_CRYPTO_FAIL) {
++                return;
++        }
++
++        if (tc_cmac_final(Cmac, &state) == TC_CRYPTO_FAIL) {
++                return;
++        }
++
++end = k_uptime_get_32();
++diff = end - start;
++LOG_HEXDUMP_ERR(Cmac, 16, "f2 out");
++LOG_ERR("took %dms", diff);
++}
