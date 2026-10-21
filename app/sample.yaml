@@ -50,6 +50,11 @@ tests:
     extra_args:
       - EXTRA_CONF_FILE="bluetooth.conf;mcumgr.conf;fota.conf;picolibc_module_speed.conf"
       - FILE_SUFFIX=fota
+  lora-hacks.htu21d.bluetooth.fota:
+    extra_args:
+      - EXTRA_CONF_FILE="bluetooth.conf;mcumgr.conf;fota.conf;picolibc_module_speed.conf"
+      - EXTRA_DTC_OVERLAY_FILE="htu21d.overlay"
+      - FILE_SUFFIX=fota
   lora-hacks.si7021.bluetooth.external.fota:
     extra_args:
       - EXTRA_CONF_FILE="bluetooth.conf;external_dcdc.conf;mcumgr.conf;fota.conf;picolibc_module_speed.conf"

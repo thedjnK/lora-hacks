@@ -1,0 +1,16 @@
+&i2c0 {
+	/delete-node/ si7021@40;
+
+	htu21d: htu21d@40 {
+		compatible = "sensirion,sht21";
+		reg = <0x40>;
+		status = "okay";
+	};
+};
+
+
+&i2c0_default {
+	group1 {
+		bias-pull-up;
+	};
+};
